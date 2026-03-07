@@ -1504,90 +1504,36 @@ th.sort-desc::after { content:' ↓'; opacity:1; color:var(--accent2); }
 const state = {
   currentPage: 'dashboard',
   user: null,
-  firmalar: [
-    {id:1, ad:'ABC Makine A.Ş.', il:'İstanbul', ilce:'Kadıköy', vergiNo:'1234567890', vade:30, iskonto:5, teller:['+90 216 555 1234'], sertMail:['sertifika@abc.com'], faturaMail:['fatura@abc.com'], ilgililer:['Ahmet Yılmaz - Satın Alma']},
-    {id:2, ad:'XYZ Kimya Ltd.', il:'Ankara', ilce:'Çankaya', vergiNo:'9876543210', vade:60, iskonto:0, teller:['+90 312 444 5678'], sertMail:['kalite@xyz.com'], faturaMail:['muhasebe@xyz.com'], ilgililer:['Fatma Kaya - Kalite Md.']},
-    {id:3, ad:'DEF Plastik Sanayi', il:'Bursa', ilce:'Nilüfer', vergiNo:'1122334455', vade:45, iskonto:10, teller:['+90 224 333 9012'], sertMail:['lab@def.com'], faturaMail:['lab@def.com'], ilgililer:['Mehmet Demir - Lab Sorumlusu']}
-  ],
-  personeller: [
-    {id:1, ad:'Ali', soyad:'Yıldız', gorev:'Baş Teknisyen', egitim:'Lisans', kadi:'ali.yildiz', kalPers:true, sertOnay:true, sertifikalar:[{ad:'ISO 17025 Eğitimi',tarih:'2023-05-15'}], kategoriler:[1,2]},
-    {id:2, ad:'Zeynep', soyad:'Arslan', gorev:'Kalibrasyon Teknisyeni', egitim:'Ön Lisans', kadi:'zeynep.a', kalPers:true, sertOnay:false, sertifikalar:[], kategoriler:[1]},
-    {id:3, ad:'Murat', soyad:'Çelik', gorev:'Kalite Koordinatörü', egitim:'Yüksek Lisans', kadi:'murat.c', kalPers:false, sertOnay:true, sertifikalar:[{ad:'Baş Denetçi',tarih:'2022-03-10'}], kategoriler:[1,2,3]}
-  ],
-  kategoriler: [
-    {id:1, ad:'Sıcaklık Laboratuvarı', sicMin:18, sicTol:2, nemMin:40, nemTol:10, dosyalar:[]},
-    {id:2, ad:'Basınç Laboratuvarı', sicMin:20, sicTol:3, nemMin:45, nemTol:15, dosyalar:[]},
-    {id:3, ad:'Elektrik Laboratuvarı', sicMin:23, sicTol:2, nemMin:50, nemTol:10, dosyalar:[]}
-  ],
-  cihazTipleri: [
-    {id:1, ad:'Termometre', katId:1, ucret:250},
-    {id:2, ad:'Manometre', katId:2, ucret:350},
-    {id:3, ad:'Multimetre', katId:3, ucret:300},
-    {id:4, ad:'Nem Ölçer', katId:1, ucret:280}
-  ],
-  refCihazlar: [
-    {id:1, ad:'Referans Termometre', no:'RC-001', marka:'Fluke', model:'1552A', seriNo:'F12345', katId:1, kalTarih:'2024-06-15', sonrakiTarih:'2025-06-15', kalNo:'KAL-2024-001', izlenebilirlik:'TÜRKAK', dosyalar:[{ad:'Kalibrasyon Sertifikası',tip:'PDF'}]},
-    {id:2, ad:'Referans Manometre', no:'RC-002', marka:'Druck', model:'DPI610', seriNo:'D67890', katId:2, kalTarih:'2024-09-01', sonrakiTarih:'2025-09-01', kalNo:'KAL-2024-015', izlenebilirlik:'PTB', dosyalar:[]}
-  ],
-  prosedurler: [
-    {id:1, ad:'Sıcaklık Kalibrasyon Prosedürü', no:'PR-001', katId:1, not:'ISO 17025 gerekliliklerine göre', dosyalar:[]},
-    {id:2, ad:'Basınç Kalibrasyon Prosedürü', no:'PR-002', katId:2, not:'', dosyalar:[]}
-  ],
-  methodlar: [
-    {id:1, ad:'Daldırma Metodu', kod:'M-001', prosedurIds:[1], not:''},
-    {id:2, ad:'Karşılaştırma Metodu', kod:'M-002', prosedurIds:[1,2], not:''}
-  ],
-  musteriCihazlari: [
-    {id:1, musteriId:1, ad:'Termometre', marka:'Testo', model:'110', seriNo:'TS001', envNo:'ENV-001', olcumAraligi:'-50/+150°C', cozunurluk:'0.1°C', methodKod:'M-001', kalYer:'Müşteri Yerinde', uygunlukId:1, degKrit:'±0.5°C', not:''},
-    {id:2, musteriId:1, ad:'Manometre', marka:'Wika', model:'232.50', seriNo:'WK123', envNo:'', olcumAraligi:'0-25 bar', cozunurluk:'0.1 bar', methodKod:'M-002', kalYer:'Kalibrasyon Laboratuvarı', uygunlukId:2, degKrit:'±0.1%', not:''},
-    {id:3, musteriId:2, ad:'Multimetre', marka:'Fluke', model:'87V', seriNo:'FL456', envNo:'ENV-003', olcumAraligi:'0-1000V', cozunurluk:'0.001V', methodKod:'', kalYer:'', uygunlukId:null, degKrit:'', not:''}
-  ],
-  cihazKabuller: [
-    {id:1, firmaId:1, tarih:'2025-01-15', teslimEden:'Ahmet Yılmaz', teslimSekli:'elden', kargoFirma:'', teslimAlan:'Ali Yıldız', termin:'2025-01-20', not:'', faturFirmaId:null, cihazlar:[{cihazId:1, durum:'tamamlandi', not:''},{cihazId:2, durum:'bekliyor', not:''}]},
-    {id:2, firmaId:2, tarih:'2025-01-18', teslimEden:'Fatma Kaya', teslimSekli:'kargo', kargoFirma:'Aras Kargo', teslimAlan:'Zeynep Arslan', termin:'2025-01-25', not:'Acil', faturFirmaId:null, cihazlar:[{cihazId:3, durum:'imzalandi', not:''}]},
-    {id:3, firmaId:3, tarih:'2025-01-22', teslimEden:'Mehmet Demir', teslimSekli:'elden', kargoFirma:'', teslimAlan:'Ali Yıldız', termin:'2025-02-01', not:'', faturFirmaId:null, cihazlar:[]}
-  ],
-  teklifler: [
-    {id:1, no:'TKL-2025-001', firmaId:1, firmaManuel:'', ilgili:'Ahmet Yılmaz', tarih:'2025-01-10', durum:'onaylandi', paraBirimi:'TL', kalemler:[{cihazAdi:'Termometre',ozellik:'',hizmetSekli:'lab',kapsam:'akredite',adet:3,birimFiyat:250,iskonto:5,kdv:20}]},
-    {id:2, no:'TKL-2025-002', firmaId:2, firmaManuel:'', ilgili:'Fatma Kaya', tarih:'2025-01-12', durum:'bekliyor', paraBirimi:'TL', kalemler:[{cihazAdi:'Manometre',ozellik:'0-25 bar',hizmetSekli:'saha',kapsam:'akredite',adet:2,birimFiyat:350,iskonto:0,kdv:20}]}
-  ],
-  uygunluklar: [
-    {id:1, tanim:'±0.5°C tolerans', varsayilan:true, cihazTipiId:1},
-    {id:2, tanim:'±0.1% full scale', varsayilan:false, cihazTipiId:2},
-    {id:3, tanim:'Genel uygunluk kriteri', varsayilan:false, cihazTipiId:null}
-  ],
-  anketSorular: [
-    {id:1, soru:'Kalibrasyon hizmetimizden genel memnuniyetiniz nedir?', tip:'puan'},
-    {id:2, soru:'Termin sürelerini yeterli buluyor musunuz?', tip:'puan'},
-    {id:3, soru:'Sertifika kalitesini nasıl değerlendirirsiniz?', tip:'puan'},
-    {id:4, soru:'Önerileriniz', tip:'metin'}
-  ],
+  firmalar: [],
+  personeller: [],
+  kategoriler: [],
+  cihazTipleri: [],
+  refCihazlar: [],
+  prosedurler: [],
+  methodlar: [],
+  musteriCihazlari: [],
+  cihazKabuller: [],
+  teklifler: [],
+  uygunluklar: [],
+  anketSorular: [],
   kalibrasyon: [],
   sertifikalar: [],
   nextSertId: 1,
   labAyarlari: {akredNo:'',akredTarih:'',labAdi:'',labAdres:'',labTel:'',labMail:'',labWeb:'',kalYer:''},
   turkakAyarlari: {username:'',password:'',apiUrl:'https://api.turkak.org.tr',token:'',tokenExpiry:'',baglanti:''},
-  labAyarlari: {
-    akredNo:'', akredTarih:'', labAdi:'', labAdres:'',
-    labTel:'', labMail:'', labWeb:'', kalYer:''
-  },
-  turkakAyarlari: {
-    username:'', password:'', apiUrl:'https://api.turkak.org.tr',
-    token:'', tokenExpiry:'', baglanti:''
-  },
   nextKalId: 1,
   lastCopiedCihaz: null,
-  nextFirmaId: 4,
-  nextPersonelId: 4,
-  nextKatId: 4,
-  nextCihazTipiId: 5,
-  nextRefId: 3,
-  nextProsId: 3,
-  nextMethodId: 3,
-  nextMCId: 4,
-  nextCKId: 4,
-  nextTeklifId: 3,
-  nextUygunlukId: 4,
+  nextFirmaId: 1,
+  nextPersonelId: 1,
+  nextKatId: 1,
+  nextCihazTipiId: 1,
+  nextRefId: 1,
+  nextProsId: 1,
+  nextMethodId: 1,
+  nextMCId: 1,
+  nextCKId: 1,
+  nextTeklifId: 1,
+  nextUygunlukId: 1,
   teklifKalemler: [],
   numaraAyarlari: {
     cbf:   {prefix:'CBF',  sayac:1},
@@ -1615,23 +1561,53 @@ const TEKLIF_DURUM_MAP = {
 // ═══════════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════════
-function doLogin() {
+async function doLogin() {
   const u = document.getElementById('loginUser').value.trim();
   const p = document.getElementById('loginPass').value;
+  let user = null;
   if (u === 'admin' && p === 'admin123') {
-    state.user = {name:'Admin', role:'Yönetici', initials:'A'};
+    user = {name:'Admin', role:'Yönetici', initials:'A', username:'admin'};
   } else {
     const pers = state.personeller.find(x => x.kadi === u);
     if (!pers) { showToast('Kullanıcı bulunamadı', 'error'); return; }
-    state.user = {name: pers.ad + ' ' + pers.soyad, role: pers.gorev, initials: pers.ad[0]+pers.soyad[0]};
+    user = {name: pers.ad + ' ' + pers.soyad, role: pers.gorev, initials: pers.ad[0]+pers.soyad[0], username: u};
   }
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  document.getElementById('userName').textContent = state.user.name;
-  document.getElementById('userRole').textContent = state.user.role;
-  document.getElementById('userAvatar').textContent = state.user.initials;
+  // DB'den state yükle
+  showToast('Yükleniyor...', 'info');
+  await dbLoadState();
+  state.user = user;
+  // Session'a kaydet (sekme kapanana kadar login kalır)
+  sessionStorage.setItem('labqcert_user', JSON.stringify(user));
+  showApp(user);
   navigate('dashboard');
 }
+
+function showApp(user) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('userName').textContent = user.name;
+  document.getElementById('userRole').textContent = user.role;
+  document.getElementById('userAvatar').textContent = user.initials;
+}
+
+function doLogout() {
+  sessionStorage.removeItem('labqcert_user');
+  state.user = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+// Sayfa yüklenince session kontrol et
+(async function initApp() {
+  const saved = sessionStorage.getItem('labqcert_user');
+  if (saved) {
+    const user = JSON.parse(saved);
+    await dbLoadState();
+    state.user = user;
+    showApp(user);
+    navigate(state.currentPage || 'dashboard');
+  }
+})();
 
 function doLogout() {
   document.getElementById('loginScreen').style.display = 'flex';
