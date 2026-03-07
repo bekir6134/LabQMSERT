@@ -2628,12 +2628,33 @@ function saveRefCihaz(){
     showToast('Dosyalar henüz hazır değil, lütfen bekleyin','warning'); return;
   }
   const pendingDosyalar=modal_rc._pendingFiles||[];
-  const dosyalar=[...existingDosyalar,...pendingDosyalar];
+  const tumDosyalar=[...existingDosyalar,...pendingDosyalar];
+  // DB'ye sadece metadata kaydet (base64 data çok büyük, limit aşar)
+  // Tam dosya verisini sessionStorage'da tut
+  const cihazStorageKey='rcfiles_'+(editId||('n'+state.nextRefId));
+  try{
+    const storageData=tumDosyalar.map(d=>({name:d.name,size:d.size,type:d.type,data:d.data||''}));
+    sessionStorage.setItem(cihazStorageKey, JSON.stringify(storageData));
+  }catch(e){console.warn('SessionStorage yazılamadı:',e);}
+  // DB'ye gönderilecek metadata (data alanı olmadan)
+  const dosyalar=tumDosyalar.map(d=>({name:d.name,size:d.size,type:d.type,storageKey:cihazStorageKey}));
   const data={ad,no:document.getElementById('rcNo').value,marka:document.getElementById('rcMarka').value,model:document.getElementById('rcModel').value,seriNo:document.getElementById('rcSeriNo').value,katId:parseInt(document.getElementById('rcKat').value)||null,kalTarih:document.getElementById('rcKalTarih').value,sonrakiTarih:document.getElementById('rcSonrakiTarih').value,kalNo:document.getElementById('rcKalNo').value,izlenebilirlik:document.getElementById('rcIzlenebilirlik').value,dosyalar};
   if(editId){const idx=state.refCihazlar.findIndex(r=>r.id===editId);state.refCihazlar[idx]={...state.refCihazlar[idx],...data};showToast('Güncellendi','success');}
-  else{state.refCihazlar.push({id:state.nextRefId++,...data});showToast('Eklendi','success');}
+  else{state.refCihazId=state.nextRefId; state.refCihazlar.push({id:state.nextRefId++,...data});showToast('Eklendi','success');}
   closeModal('refCihazModal');renderPage('referansCihaz');
-  dbAutoSave(["refCihazlar", "nextRefId"]);
+  // Dosya datasını ayrı DB key olarak kaydet
+  const savedId = editId || (state.nextRefId - 1);
+  if(tumDosyalar.some(d=>d.data)){
+    const fileDataKey = 'rcfiles_' + savedId;
+    state[fileDataKey] = tumDosyalar;
+    if(!DB_KEYS.includes(fileDataKey)) DB_KEYS.push(fileDataKey);
+    dbAutoSave(["refCihazlar", "nextRefId", fileDataKey]);
+    // dosyalar metadata'sını güncelle - storageKey ile ilişkilendir
+    const rc = state.refCihazlar.find(r=>r.id===savedId);
+    if(rc) rc.dosyalar = tumDosyalar.map(d=>({name:d.name,size:d.size,type:d.type,storageKey:fileDataKey}));
+  } else {
+    dbAutoSave(["refCihazlar", "nextRefId"]);
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -4574,6 +4595,20 @@ async function dbLoadState() {
         loaded++;
       }
     }
+    // Dosya verilerini yükle ve refCihazlar ile ilişkilendir
+    for(const key of Object.keys(data)){
+      if(key.startsWith('rcfiles_')){
+        state[key] = data[key];
+        if(!DB_KEYS.includes(key)) DB_KEYS.push(key);
+        // İlgili refCihaz'ın dosyalarını güncelle
+        const cihazId = parseInt(key.replace('rcfiles_',''));
+        const rc = state.refCihazlar?.find(r=>r.id===cihazId);
+        if(rc && data[key]?.length){
+          rc.dosyalar = data[key];
+        }
+        loaded++;
+      }
+    }
     console.log('DB: ' + loaded + ' key yuklendi');
   } catch(e) {
     console.warn('DB yuklenemedi:', e.message);
@@ -4636,17 +4671,14 @@ const dosyaStore = {};
 function getDosyaKey(tip, id) { return `${tip}_${id}`; }
 
 function openDosyaModal(tip, id) {
-  const key = getDosyaKey(tip, id);
-  if (!dosyaStore[key]) dosyaStore[key] = [];
   document.getElementById('dosyaModal')._tip = tip;
   document.getElementById('dosyaModal')._id = id;
-  
   const tipLabel = tip === 'refCihaz' ? 'Referans Cihaz' : 'Prosedür';
   let kayitAdi = '';
   if (tip === 'refCihaz') { const r=state.refCihazlar.find(x=>x.id===id); kayitAdi=r?.ad||''; }
   if (tip === 'prosedur') { const p=state.prosedurler.find(x=>x.id===id); kayitAdi=p?.ad||''; }
   document.getElementById('dosyaModalTitle').textContent = `📎 ${kayitAdi} — Dosyalar`;
-  renderDosyaGrid(key);
+  renderDosyaGridFromState(tip, id);
   openModal('dosyaModal');
 }
 
@@ -4685,6 +4717,72 @@ function handleDosyaUpload(input) {
     };
     reader.readAsDataURL(file);
   });
+}
+
+function renderDosyaGridFromState(tip, id) {
+  const grid = document.getElementById('dosyaGrid');
+  let dosyalar = [];
+  if(tip === 'refCihaz'){
+    const r = state.refCihazlar.find(x=>x.id===id);
+    dosyalar = r?.dosyalar || [];
+    // sessionStorage'dan dosya datasını yükle
+    if(dosyalar.length && dosyalar[0]?.storageKey){
+      try{
+        const stored = JSON.parse(sessionStorage.getItem(dosyalar[0].storageKey)||'[]');
+        if(stored.length) dosyalar = stored;
+      }catch(e){}
+    }
+  } else if(tip === 'prosedur'){
+    const p = state.prosedurler.find(x=>x.id===id);
+    dosyalar = p?.dosyalar || [];
+  }
+  document.getElementById('dosyaModal')._stateDosyalar = dosyalar;
+  if(!dosyalar.length){
+    grid.innerHTML = '<p style="color:var(--text3);font-size:13px;text-align:center;padding:32px;grid-column:1/-1">Henüz dosya yüklenmemiş.</p>';
+    return;
+  }
+  grid.innerHTML = dosyalar.map((f,i)=>{
+    const ext = (f.name||'').split('.').pop().toUpperCase();
+    const icon = ext==='PDF'?'📄':(ext==='XLS'||ext==='XLSX')?'📊':'🖼️';
+    const sizeStr = f.size>1024*1024?(f.size/1024/1024).toFixed(1)+'MB':(f.size/1024).toFixed(0)+'KB';
+    return `<div class="file-card">
+      <div class="file-card-icon">${icon}</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;background:var(--bg4);padding:2px 6px;border-radius:4px;color:var(--text2)">${ext}</div>
+      <div class="file-card-name">${f.name}</div>
+      <div class="file-card-size">${sizeStr}</div>
+      <div class="file-card-actions">
+        ${f.data?`<button class="btn btn-blue btn-xs" onclick="event.stopPropagation();onizleDosyaState(${i},'${tip}',${id})">👁️</button>`:'<span style="font-size:11px;color:var(--text3)">⚠️yenile</span>'}
+        <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();silDosyaState(${i},'${tip}',${id})">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function onizleDosyaState(i, tip, id){
+  const dosyalar = document.getElementById('dosyaModal')._stateDosyalar || [];
+  const f = dosyalar[i];
+  if(!f?.data){showToast('Dosya verisi yok, sayfayı yenileyip tekrar yükleyin','warning');return;}
+  const mime = f.type||'application/octet-stream';
+  const url = `data:${mime};base64,${f.data}`;
+  window.open(url,'_blank');
+}
+
+function silDosyaState(i, tip, id){
+  if(!confirm('Dosya silinsin mi?')) return;
+  let arr, key;
+  if(tip==='refCihaz'){
+    const r=state.refCihazlar.find(x=>x.id===id);
+    if(!r) return;
+    r.dosyalar = (r.dosyalar||[]).filter((_,j)=>j!==i);
+    dbAutoSave(['refCihazlar']);
+  } else {
+    const p=state.prosedurler.find(x=>x.id===id);
+    if(!p) return;
+    p.dosyalar = (p.dosyalar||[]).filter((_,j)=>j!==i);
+    dbAutoSave(['prosedurler']);
+  }
+  renderDosyaGridFromState(tip, id);
+  showToast('Dosya silindi','info');
 }
 
 function renderDosyaGrid(key) {
