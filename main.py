@@ -65,7 +65,7 @@ async def get_all_state():
     except Exception as e:
         raise HTTPException(500, str(e))
 
-@app.post("/api/state/batch")
+@app.post("/api/state-batch")
 async def save_state_batch(request: Request):
     try:
         data = await request.json()
