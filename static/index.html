@@ -911,6 +911,20 @@ th.sort-desc::after { content:' ↓'; opacity:1; color:var(--accent2); }
         </div>
         <button class="multi-add-btn" onclick="addSertInput()">+ Sertifika Ekle</button>
       </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Rol</label>
+          <select id="pRol" onchange="onPRolChange()">
+            <option value="Goruntuleyebilir">Görüntüleyebilir</option>
+            <option value="Duzenleyebilir">Düzenleyebilir</option>
+            <option value="Yonetici">Yönetici</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Durum</label>
+          <select id="pActive"><option value="true">Aktif</option><option value="false">Pasif</option></select>
+        </div>
+      </div>
       <div class="form-field">
         <label>Yetkili Olduğu Kategoriler</label>
         <div id="pKatContainer" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
@@ -1088,16 +1102,25 @@ th.sort-desc::after { content:' ↓'; opacity:1; color:var(--accent2); }
         <div class="form-field col1"><label>Kargo Firması</label><input id="ckKargoFirma" placeholder="Kargo firması adı"></div>
       </div>
       <div class="form-row">
-        <div class="form-field"><label>Teslim Alan</label><input id="ckTeslimAlan"></div>
+        <div class="form-field"><label>Teslim Alan</label>
+          <select id="ckTeslimAlan">
+            <option value="">Personel Seçiniz</option>
+          </select>
+        </div>
         <div class="form-field"><label>Termin Tarihi</label><input type="date" id="ckTermin"></div>
       </div>
       <div class="form-row col1">
         <div class="form-field"><label>Not</label><textarea id="ckNot" rows="2"></textarea></div>
       </div>
       <div id="ckFaturaRow" style="display:none" class="mb-16">
-        <div class="flex-between gap-8" style="padding:10px 12px;background:var(--orangebg);border:1px solid rgba(210,153,34,.3);border-radius:var(--radius)">
-          <span style="font-size:13px;color:var(--orange)">⚠️ Fatura farklı firmaya kesilecek</span>
-          <button class="btn btn-secondary btn-sm" onclick="clearFaturaFirma()">✕ Kaldır</button>
+        <div style="padding:10px 12px;background:var(--orangebg);border:1px solid rgba(210,153,34,.3);border-radius:var(--radius)">
+          <div class="flex-between gap-8" style="margin-bottom:8px">
+            <span style="font-size:13px;color:var(--orange)">⚠️ Fatura farklı firmaya kesilecek</span>
+            <button class="btn btn-secondary btn-sm" onclick="clearFaturaFirma()">✕ Kaldır</button>
+          </div>
+          <select id="ckFaturaFirma" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-size:13px;font-family:inherit">
+            <option value="">Fatura Firması Seçiniz</option>
+          </select>
         </div>
       </div>
       <button class="btn btn-secondary btn-sm mb-16" onclick="showFaturaFirmaSelect()">🧾 Fatura Firması Farklı</button>
@@ -2581,7 +2604,11 @@ function saveRefCihaz(){
   const ad=document.getElementById('rcAdi').value.trim();
   if(!ad){showToast('Cihaz adı zorunlu','error');return;}
   const editId=document.getElementById('refCihazModal')._editId;
-  const data={ad,no:document.getElementById('rcNo').value,marka:document.getElementById('rcMarka').value,model:document.getElementById('rcModel').value,seriNo:document.getElementById('rcSeriNo').value,katId:parseInt(document.getElementById('rcKat').value)||null,kalTarih:document.getElementById('rcKalTarih').value,sonrakiTarih:document.getElementById('rcSonrakiTarih').value,kalNo:document.getElementById('rcKalNo').value,izlenebilirlik:document.getElementById('rcIzlenebilirlik').value,dosyalar:[]};
+  const modal_rc=document.getElementById('refCihazModal');
+  const existingDosyalar=editId?(state.refCihazlar.find(r=>r.id===editId)?.dosyalar||[]):[];
+  const pendingDosyalar=modal_rc._pendingFiles||[];
+  const dosyalar=[...existingDosyalar,...pendingDosyalar];
+  const data={ad,no:document.getElementById('rcNo').value,marka:document.getElementById('rcMarka').value,model:document.getElementById('rcModel').value,seriNo:document.getElementById('rcSeriNo').value,katId:parseInt(document.getElementById('rcKat').value)||null,kalTarih:document.getElementById('rcKalTarih').value,sonrakiTarih:document.getElementById('rcSonrakiTarih').value,kalNo:document.getElementById('rcKalNo').value,izlenebilirlik:document.getElementById('rcIzlenebilirlik').value,dosyalar};
   if(editId){const idx=state.refCihazlar.findIndex(r=>r.id===editId);state.refCihazlar[idx]={...state.refCihazlar[idx],...data};showToast('Güncellendi','success');}
   else{state.refCihazlar.push({id:state.nextRefId++,...data});showToast('Eklendi','success');}
   closeModal('refCihazModal');renderPage('referansCihaz');
@@ -2857,8 +2884,21 @@ function saveMusteriCihaz(){
   const editId=document.getElementById('musteriCihazModal')._editId;
   if(editId){const idx=state.musteriCihazlari.findIndex(c=>c.id===editId);state.musteriCihazlari[idx]={...state.musteriCihazlari[idx],...data};showToast('Güncellendi','success');}
   else{state.lastCopiedCihaz={...data};state.musteriCihazlari.push({id:state.nextMCId++,...data});showToast('Cihaz eklendi (kopyalandı)','success');}
-  closeModal('musteriCihazModal');renderPage('musteriCihazlari');
   dbAutoSave(["musteriCihazlari", "nextMCId"]);
+  // Hızlı kayıt: cihaz kabul fişine ekle ve fişe dön
+  const mcModal=document.getElementById('musteriCihazModal');
+  if(mcModal._fromCK){
+    mcModal._fromCK=false;
+    const newCihazId=state.musteriCihazlari[state.musteriCihazlari.length-1].id;
+    const ckModal=document.getElementById('cihazKabulModal');
+    if(!ckModal._cihazlar) ckModal._cihazlar=[];
+    ckModal._cihazlar.push({cihazId:newCihazId,durum:'bekliyor',not:''});
+    closeModal('musteriCihazModal');
+    refreshCKCihazList();
+    showToast('Cihaz fişe eklendi','success');
+  } else {
+    renderPage('musteriCihazlari');
+  }
 }
 
 function saveMusteriCihazSeri(){
@@ -3037,6 +3077,7 @@ function cihazKabulKart(k) {
       </div>
       <div style="display:flex;gap:5px;align-items:center" onclick="event.stopPropagation()">
         <button class="btn btn-secondary btn-xs" onclick="showFisOnizleme(${k.id})">📄 Fiş</button>
+        <button class="btn btn-secondary btn-xs" onclick="showFisOnizleme(${k.id});setTimeout(fisPdfIndir,300)">🖨️ Yazdır</button>
         <button class="btn btn-blue btn-xs" onclick="openMailModal(${k.id})">📧 Mail</button>
         <button class="btn btn-secondary btn-xs" onclick="editCihazKabul(${k.id})">✏️</button>
         <button class="btn btn-danger btn-xs" onclick="deleteCK(${k.id})">🗑️</button>
@@ -3183,6 +3224,9 @@ function openCihazKabulModal(id=null){
   document.getElementById('ckTarih').value=new Date().toISOString().split('T')[0];
   document.getElementById('ckTermin').value='';
   document.getElementById('ckTeslimSekli').value='elden';
+  // Teslim alan personel listesi
+  const taSel=document.getElementById('ckTeslimAlan');
+  taSel.innerHTML='<option value="">Personel Seçiniz</option>'+state.personeller.map(p=>`<option value="${p.ad} ${p.soyad}">${p.ad} ${p.soyad}</option>`).join('');
   document.getElementById('kargoRow').style.display='none';
   document.getElementById('ckFaturaRow').style.display='none';
   document.getElementById('ckCihazListesi').innerHTML='<p style="color:var(--text3);font-size:12px;text-align:center">Henüz cihaz eklenmedi.</p>';
@@ -3212,7 +3256,12 @@ function ckTeslimChange(){
   document.getElementById('kargoRow').style.display=v==='kargo'?'':'none';
 }
 function ckFirmaChange(){}
-function showFaturaFirmaSelect(){document.getElementById('ckFaturaRow').style.display='';}
+function showFaturaFirmaSelect(){
+  const row=document.getElementById('ckFaturaRow');
+  row.style.display='';
+  const sel=document.getElementById('ckFaturaFirma');
+  sel.innerHTML='<option value="">Fatura Firması Seçiniz</option>'+state.firmalar.map(f=>`<option value="${f.id}">${f.ad}</option>`).join('');
+}
 function clearFaturaFirma(){document.getElementById('ckFaturaRow').style.display='none';}
 
 function openCihazSecModal(){
@@ -3253,8 +3302,19 @@ function addSelectedCihazlar(){
 }
 
 function openHizliCihazEkle(){
+  const firmaId=parseInt(document.getElementById('ckFirma').value)||null;
+  // Fişi kapatma, sadece müşteri cihaz modalını aç
   openMusteriCihazModal();
-  closeModal('cihazKabulModal');
+  // Firmayı otomatik seç
+  if(firmaId){
+    setTimeout(()=>{
+      const sel=document.getElementById('mcMusteri');
+      if(sel){sel.value=firmaId;sel.disabled=true;}
+    },50);
+  }
+  // _fromCK flag: kaydet sonrası fişe geri dön
+  document.getElementById('musteriCihazModal')._fromCK=true;
+  document.getElementById('musteriCihazModal')._ckFirmaId=firmaId;
 }
 
 function refreshCKCihazList(){
@@ -3292,7 +3352,7 @@ function saveCihazKabul(){
     teslimAlan:document.getElementById('ckTeslimAlan').value,
     termin:document.getElementById('ckTermin').value,
     not:document.getElementById('ckNot').value,
-    faturFirmaId:null,
+    faturFirmaId:parseInt(document.getElementById('ckFaturaFirma')?.value)||null,
     cihazlar:modal._cihazlar||[]
   };
   if(editId){const idx=state.cihazKabuller.findIndex(k=>k.id===editId);state.cihazKabuller[idx]={...state.cihazKabuller[idx],...data};showToast('Fiş güncellendi','success');}
@@ -3876,6 +3936,7 @@ function showFisOnizleme(fisId){
             <tr><td style="color:#666;padding:3px 0">İl</td><td>${firma?.il||'-'}</td></tr>
             <tr><td style="color:#666;padding:3px 0">Telefon</td><td>${firma?.teller?.[0]||'-'}</td></tr>
           </table>
+          ${(()=>{const ff=k.faturFirmaId?state.firmalar.find(f=>f.id===k.faturFirmaId):null;return ff?`<div style="margin-top:10px;padding:8px;background:#fef3c7;border-radius:4px;font-size:12px"><strong>Fatura Adresi:</strong><br>${ff.ad}<br>${ff.vergiDaire?'V.D.: '+ff.vergiDaire:''} ${ff.vergiNo?'V.No: '+ff.vergiNo:''}<br>${ff.ilce?ff.ilce+' / ':''} ${ff.il||''}<br>${ff.teller?.[0]||''}</div>`:''})()}
         </div>
         <div>
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:8px;font-weight:600">Fiş Bilgileri</div>
@@ -3923,8 +3984,8 @@ function fisPdfIndir(){
   const win=window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Kabul Fişi</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>body{font-family:'DM Sans',sans-serif;margin:0;padding:0}@media print{body{margin:0}}</style>
-    </head><body>${printContent.innerHTML}</body></html>`);
+    <style>body{font-family:'DM Sans',sans-serif;margin:0;padding:0;background:#fff;color:#111}@media print{body{margin:0;background:#fff;color:#111}*{color:#111!important;background:transparent!important}strong{color:#111!important}td,th{color:#111!important}}</style>
+    </head><body style="background:#fff;color:#111">${printContent.innerHTML}</body></html>`);
   win.document.close();
   setTimeout(()=>{win.print();},500);
 }
