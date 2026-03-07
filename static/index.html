@@ -3977,12 +3977,13 @@ function artirNumara(tip) {
 // SERTİFİKALAR
 // ═══════════════════════════════════════════════
 const SERT_DURUM_MAP = {
-  taslak:       {label:'Taslak',        cls:'badge-gray',   step:0},
-  hazirlaniyor: {label:'Hazırlanıyor',  cls:'badge-orange', step:1},
-  onaylandi:    {label:'Onaylandı',     cls:'badge-green',  step:2},
-  gonderildi:   {label:'Gönderildi',    cls:'badge-purple', step:3}
+  taslak:       {label:'Taslak',       cls:'badge-gray',   step:0},
+  hazirlaniyor: {label:'Hazırlanıyor', cls:'badge-orange', step:1},
+  imzalandi:    {label:'İmzalandı',    cls:'badge-blue',   step:2},
+  onaylandi:    {label:'Onaylandı',    cls:'badge-green',  step:3},
+  gonderildi:   {label:'Gönderildi',   cls:'badge-purple', step:4}
 };
-const SERT_ADIMLAR = ['Taslak','Hazırlanıyor','Onaylandı','Gönderildi'];
+const SERT_ADIMLAR = ['Taslak','Hazırlanıyor','İmzalandı','Onaylandı','Gönderildi'];
 
 // CK aşama etiketleri → sertifika durumu eşleşmesi
 const CK_SERT_STAGE = {
@@ -4009,15 +4010,15 @@ function renderSertifikalar(c) {
   updateSertBadge();
 
   const gruplar = [
-    {ckDurum:'bekliyor',             label:'⏳ İşlem Bekliyor',         cls:'badge-gray'},
-    {ckDurum:'tamamlandi',           label:'🔬 Kalibrasyon Tamamlandı', cls:'badge-blue'},
-    {ckDurum:'imzalandi',            label:'✍️ İmzalandı',              cls:'badge-orange'},
-    {ckDurum:'onaylandi',            label:'🔏 Onaylandı',              cls:'badge-green'},
-    {ckDurum:'sertifika_gonderildi', label:'📨 Gönderildi',             cls:'badge-purple'}
+    {ckDurum:'bekliyor',             label:'⏳ Taslak',       cls:'badge-gray'},
+    {ckDurum:'tamamlandi',           label:'🔬 Hazırlanıyor', cls:'badge-orange'},
+    {ckDurum:'imzalandi',            label:'✍️ İmzalandı',    cls:'badge-blue'},
+    {ckDurum:'onaylandi',            label:'🔏 Onaylandı',    cls:'badge-green'},
+    {ckDurum:'sertifika_gonderildi', label:'📨 Gönderildi',   cls:'badge-purple'}
   ];
 
   function getCKCihazDurum(sert) {
-    const map={taslak:'bekliyor',hazirlaniyor:'tamamlandi',onaylandi:'onaylandi',gonderildi:'sertifika_gonderildi'};
+    const map={taslak:'bekliyor',hazirlaniyor:'tamamlandi',imzalandi:'imzalandi',onaylandi:'onaylandi',gonderildi:'sertifika_gonderildi'};
     return map[sert.durum]||'bekliyor';
   }
 
@@ -4055,6 +4056,7 @@ function renderSertifikalar(c) {
       <button class="btn btn-secondary" onclick="turkakRevize()" style="display:flex;align-items:center;gap:7px">
         <span>🔄</span><span>Türkak Sertifikalarını Revize Et</span>
       </button>
+
     </div>`;
 
   // ── Stepper Bar
@@ -4130,9 +4132,14 @@ function renderSertifikalar(c) {
     if(!sertler.length) return;
     html += `
       <div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <span class="badge ${g.cls}">${g.label}</span>
-          <span style="font-size:12px;color:var(--text3)">${sertler.length} sertifika</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="badge ${g.cls}">${g.label}</span>
+            <span style="font-size:12px;color:var(--text3)">${sertler.length} sertifika</span>
+          </div>
+          ${g.ckDurum==='tamamlandi'?`<button class="btn btn-blue btn-sm" onclick="grupImzala('hazirlaniyor')" style="display:flex;align-items:center;gap:5px">✍️ Tümünü Onayla → İmzalandı</button>`:''}
+          ${g.ckDurum==='imzalandi'?`<button class="btn btn-primary btn-sm" onclick="grupImzala('imzalandi')" style="display:flex;align-items:center;gap:5px">🔏 Tümünü İmzala → Onaylandı</button>`:''}
+          ${g.ckDurum==='onaylandi'?`<button class="btn btn-secondary btn-sm" onclick="grupImzala('onaylandi')" style="display:flex;align-items:center;gap:5px">✅ Tümünü Tamamla → Gönderildi</button>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
           ${sertler.map(s => {
@@ -4166,6 +4173,54 @@ function renderSertifikalar(c) {
   html += `</div>`;
   c.innerHTML = html;
 }
+function grupImzala(mevcutDurum) {
+  // Filtre uygulanmış görünür sertifikaları al
+  const q     = (document.getElementById('sertArama')?.value||'').toLowerCase();
+  const dtBas = document.getElementById('sertTarihBas')?.value||'';
+  const dtBit = document.getElementById('sertTarihBit')?.value||'';
+
+  let liste = state.sertifikalar.filter(s => s.durum === mevcutDurum);
+
+  // Filtre uygula
+  if(q) liste = liste.filter(s => {
+    const firma = state.firmalar.find(f=>f.id===s.firmaId);
+    const mc    = state.musteriCihazlari.find(x=>x.id===s.cihazId);
+    const fis   = state.cihazKabuller.find(k=>k.id===s.fisId);
+    return (s.no||'').toLowerCase().includes(q)
+      || (firma?.ad||'').toLowerCase().includes(q)
+      || (mc?.ad||'').toLowerCase().includes(q)
+      || (mc?.seriNo||'').toLowerCase().includes(q)
+      || (mc?.envNo||'').toLowerCase().includes(q)
+      || (fis?.fisNo||'').toLowerCase().includes(q);
+  });
+  if(dtBas) liste = liste.filter(s => (s.tarih||'') >= dtBas);
+  if(dtBit) liste = liste.filter(s => (s.tarih||'') <= dtBit);
+
+  if(!liste.length) { showToast('Listelenmiş sertifika yok','warning'); return; }
+
+  const hedefDurum = mevcutDurum === 'hazirlaniyor' ? 'imzalandi'
+                   : mevcutDurum === 'imzalandi'    ? 'onaylandi'
+                   : 'gonderildi';
+  const hedefLabel = mevcutDurum === 'hazirlaniyor' ? 'İmzalandı'
+                   : mevcutDurum === 'imzalandi'    ? 'Onaylandı'
+                   : 'Gönderildi';
+
+  const kim = state.currentUser?.username || 'Kullanici';
+  const gun = new Date().toISOString().split('T')[0];
+
+  showConfirm(liste.length + ' sertifika ' + hedefLabel + ' asamasina alinsin mi?', () => {
+    liste.forEach(s => {
+      s.durum = hedefDurum;
+      if(hedefDurum === 'imzalandi')  { s.imzalayanAd = kim; s.imzalamaTarih = gun; }
+      if(hedefDurum === 'onaylandi')  { s.onaylayanAd = kim; s.onaylamaTarih = gun; }
+      if(hedefDurum === 'gonderildi') { s.gonderenAd  = kim; s.gonderimTarih = gun; }
+    });
+    updateSertBadge();
+    showToast(liste.length + ' sertifika ' + hedefLabel + ' yapildi', 'success');
+    renderSertListeOnly();
+  });
+}
+
 function clearSertFiltre() {
   const s=document.getElementById('sertSearch');
   const b=document.getElementById('sertTarihBas');
@@ -4196,14 +4251,14 @@ function sertFilterUpdate() {
 
 function renderSertListeOnly() {
   const gruplar = [
-    {ckDurum:'bekliyor',             label:'⏳ İşlem Bekliyor',         cls:'badge-gray'},
-    {ckDurum:'tamamlandi',           label:'🔬 Kalibrasyon Tamamlandı', cls:'badge-blue'},
-    {ckDurum:'imzalandi',            label:'✍️ İmzalandı',              cls:'badge-orange'},
-    {ckDurum:'onaylandi',            label:'🔏 Onaylandı',              cls:'badge-green'},
-    {ckDurum:'sertifika_gonderildi', label:'📨 Gönderildi',             cls:'badge-purple'}
+    {ckDurum:'bekliyor',             label:'⏳ Taslak',       cls:'badge-gray'},
+    {ckDurum:'tamamlandi',           label:'🔬 Hazırlanıyor', cls:'badge-orange'},
+    {ckDurum:'imzalandi',            label:'✍️ İmzalandı',    cls:'badge-blue'},
+    {ckDurum:'onaylandi',            label:'🔏 Onaylandı',    cls:'badge-green'},
+    {ckDurum:'sertifika_gonderildi', label:'📨 Gönderildi',   cls:'badge-purple'}
   ];
   function getCKDurum(sert) {
-    const map={taslak:'bekliyor',hazirlaniyor:'tamamlandi',onaylandi:'onaylandi',gonderildi:'sertifika_gonderildi'};
+    const map={taslak:'bekliyor',hazirlaniyor:'tamamlandi',imzalandi:'imzalandi',onaylandi:'onaylandi',gonderildi:'sertifika_gonderildi'};
     return map[sert.durum]||'bekliyor';
   }
   const q        = (document.getElementById('sertSearch')?.value||'').toLowerCase().trim();
