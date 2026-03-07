@@ -4600,12 +4600,17 @@ async function dbLoadState() {
       if(key.startsWith('rcfiles_')){
         state[key] = data[key];
         if(!DB_KEYS.includes(key)) DB_KEYS.push(key);
-        // İlgili refCihaz'ın dosyalarını güncelle
         const cihazId = parseInt(key.replace('rcfiles_',''));
         const rc = state.refCihazlar?.find(r=>r.id===cihazId);
-        if(rc && data[key]?.length){
-          rc.dosyalar = data[key];
-        }
+        if(rc && data[key]?.length) rc.dosyalar = data[key];
+        loaded++;
+      }
+      if(key.startsWith('prosfiles_')){
+        state[key] = data[key];
+        if(!DB_KEYS.includes(key)) DB_KEYS.push(key);
+        const prosId = parseInt(key.replace('prosfiles_',''));
+        const pr = state.prosedurler?.find(p=>p.id===prosId);
+        if(pr && data[key]?.length) pr.dosyalar = data[key];
         loaded++;
       }
     }
@@ -4684,38 +4689,55 @@ function openDosyaModal(tip, id) {
 
 function handleDosyaUpload(input) {
   const modal = document.getElementById('dosyaModal');
-  const key = getDosyaKey(modal._tip, modal._id);
-  if (!dosyaStore[key]) dosyaStore[key] = [];
-  
+  const tip = modal._tip;
+  const id = modal._id;
   const files = [...input.files];
-  let loaded = 0;
-  files.forEach(file => {
+  if(!files.length) return;
+
+  // Yükleniyor göster
+  showToast(`${files.length} dosya yükleniyor...`, 'info');
+
+  const readers = files.map(file => new Promise(resolve => {
     const reader = new FileReader();
-    reader.onload = (e) => {
-      dosyaStore[key].push({
+    reader.onload = e => {
+      resolve({
         name: file.name,
         type: file.type,
         ext: file.name.split('.').pop().toUpperCase(),
         size: file.size,
-        dataUrl: e.target.result
+        data: e.target.result.split(',')[1]
       });
-      // update state dosyalar count
-      if (modal._tip === 'refCihaz') {
-        const r = state.refCihazlar.find(x=>x.id===modal._id);
-        if (r) r.dosyalar = dosyaStore[key];
-      }
-      if (modal._tip === 'prosedur') {
-        const p = state.prosedurler.find(x=>x.id===modal._id);
-        if (p) p.dosyalar = dosyaStore[key];
-      }
-      loaded++;
-      if (loaded === files.length) {
-        renderDosyaGrid(key);
-        showToast(`${loaded} dosya yüklendi`, 'success');
-        input.value = '';
-      }
     };
     reader.readAsDataURL(file);
+  }));
+
+  Promise.all(readers).then(newFiles => {
+    // State'e ekle
+    if(tip === 'refCihaz'){
+      const r = state.refCihazlar.find(x=>x.id===id);
+      if(r){
+        if(!r.dosyalar) r.dosyalar = [];
+        r.dosyalar.push(...newFiles);
+        // Ayrı DB key'e kaydet
+        const fileDataKey = 'rcfiles_' + id;
+        state[fileDataKey] = r.dosyalar;
+        if(!DB_KEYS.includes(fileDataKey)) DB_KEYS.push(fileDataKey);
+        dbAutoSave(['refCihazlar', fileDataKey]);
+      }
+    } else if(tip === 'prosedur'){
+      const p = state.prosedurler.find(x=>x.id===id);
+      if(p){
+        if(!p.dosyalar) p.dosyalar = [];
+        p.dosyalar.push(...newFiles);
+        const fileDataKey = 'prosfiles_' + id;
+        state[fileDataKey] = p.dosyalar;
+        if(!DB_KEYS.includes(fileDataKey)) DB_KEYS.push(fileDataKey);
+        dbAutoSave(['prosedurler', fileDataKey]);
+      }
+    }
+    renderDosyaGridFromState(tip, id);
+    showToast(`${newFiles.length} dosya kaydedildi ✅`, 'success');
+    input.value = '';
   });
 }
 
