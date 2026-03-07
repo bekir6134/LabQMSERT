@@ -739,7 +739,7 @@ th.sort-desc::after { content:' ↓'; opacity:1; color:var(--accent2); }
         </div>
         <div class="nav-item" onclick="navigate('cihazKabul')">
           <span class="nav-icon">📥</span> Cihaz Kabul
-          <span class="nav-badge">3</span>
+          <span class="nav-badge" id="ckBadge">0</span>
         </div>
         <div class="nav-item" onclick="navigate('teklifler')">
           <span class="nav-icon">💼</span> Teklifler
@@ -1672,8 +1672,14 @@ const PAGE_META = {
   sertifikalar: {title:'Sertifikalar', subtitle:'Kalibrasyon sertifika yönetimi'}
 };
 
+function updateCKBadge() {
+  const el=document.getElementById('ckBadge');
+  if(el) el.textContent=state.cihazKabuller.length;
+}
+
 function navigate(page) {
   state.currentPage = page;
+  updateCKBadge();
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(el => {
     if (el.getAttribute('onclick') && el.getAttribute('onclick').includes(`'${page}'`)) el.classList.add('active');
@@ -2817,7 +2823,8 @@ function mcRows(filter, list) {
     return `<tr>
       <td>${firma?.ad||c.musteriId}</td>
       <td><strong>${c.ad}</strong></td>
-      <td>${c.marka||''} ${c.model||''}</td>
+      <td>${c.marka||'-'}</td>
+      <td>${c.model||'-'}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${c.seriNo||'-'}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${c.envNo||'-'}</td>
       <td><span class="chip">${c.methodKod||'-'}</span></td>
@@ -2894,6 +2901,9 @@ function saveMusteriCihaz(){
     if(!ckModal._cihazlar) ckModal._cihazlar=[];
     ckModal._cihazlar.push({cihazId:newCihazId,durum:'bekliyor',not:''});
     closeModal('musteriCihazModal');
+    // cihazKabul modalını tekrar öne çıkar
+    const ckOv2=document.getElementById('cihazKabulModal');
+    if(ckOv2){ckOv2.style.zIndex='200';ckOv2.classList.add('open');}
     refreshCKCihazList();
     showToast('Cihaz fişe eklendi','success');
   } else {
@@ -3249,7 +3259,7 @@ function openCihazKabulModal(id=null){
   openModal('cihazKabulModal');
 }
 function editCihazKabul(id){openCihazKabulModal(id);}
-function deleteCK(id){showConfirm('Kabul fişi silinsin mi?', ()=>{ state.cihazKabuller=state.cihazKabuller.filter(k=>k.id!==id); renderPage('cihazKabul'); showToast('Fiş silindi','info'); dbAutoSave(["cihazKabuller"]); }); }
+function deleteCK(id){showConfirm('Kabul fişi silinsin mi?', ()=>{ state.cihazKabuller=state.cihazKabuller.filter(k=>k.id!==id); renderPage('cihazKabul'); updateCKBadge(); showToast('Fiş silindi','info'); dbAutoSave(["cihazKabuller"]); }); }
 
 function ckTeslimChange(){
   const v=document.getElementById('ckTeslimSekli').value;
@@ -3303,16 +3313,24 @@ function addSelectedCihazlar(){
 
 function openHizliCihazEkle(){
   const firmaId=parseInt(document.getElementById('ckFirma').value)||null;
-  // Fişi kapatma, sadece müşteri cihaz modalını aç
+  // Fişi kapatmadan müşteri cihaz modalını üstte aç
   openMusteriCihazModal();
-  // Firmayı otomatik seç
-  if(firmaId){
-    setTimeout(()=>{
-      const sel=document.getElementById('mcMusteri');
-      if(sel){sel.value=firmaId;sel.disabled=true;}
-    },50);
-  }
-  // _fromCK flag: kaydet sonrası fişe geri dön
+  // musteriCihazModal z-index'ini cihazKabulModal'ın üstüne çıkar
+  setTimeout(()=>{
+    const mcOv=document.getElementById('musteriCihazModal');
+    const ckOv=document.getElementById('cihazKabulModal');
+    if(mcOv) mcOv.style.zIndex='500';
+    if(ckOv) ckOv.style.zIndex='201';
+    // Firmayı otomatik seç ve kilitle
+    const sel=document.getElementById('mcMusteri');
+    if(sel && firmaId){
+      sel.value=firmaId;
+      sel.disabled=true;
+      // Firma adını göster
+      const firma=state.firmalar.find(f=>f.id===firmaId);
+      if(firma) sel.title='Otomatik: '+firma.ad;
+    }
+  },50);
   document.getElementById('musteriCihazModal')._fromCK=true;
   document.getElementById('musteriCihazModal')._ckFirmaId=firmaId;
 }
@@ -3363,6 +3381,7 @@ function saveCihazKabul(){
     showToast('Fiş oluşturuldu: '+fisNo,'success');
   }
   closeModal('cihazKabulModal');renderPage('cihazKabul');
+  updateCKBadge();
   dbAutoSave(["cihazKabuller", "nextCKId"]);
 }
 
@@ -4727,7 +4746,7 @@ function openModal(id){
   const modalBox = overlay.querySelector('.modal');
   if(modalBox) modalBox.onclick = e => e.stopPropagation();
 }
-function closeModal(id){const el=document.getElementById(id); el.classList.remove('open'); el.onclick=null;}
+function closeModal(id){const el=document.getElementById(id); el.classList.remove('open'); el.onclick=null; el.style.zIndex='';}
 
 // backdrop click kapatma devre dışı
 
