@@ -1905,6 +1905,7 @@ function kargoEtiket(id) {
 function saveFirma() {
   const ad = document.getElementById('fFirmaAdi').value.trim();
   if(!ad) { showToast('Firma adı zorunludur','error'); return; }
+  dbAutoSave(["firmalar", "nextFirmaId"]);
   const modal = document.getElementById('firmaModal');
   const editId = modal._editId;
   const data = {
@@ -2077,6 +2078,7 @@ function deletePersonel(id) {
     state.personeller=state.personeller.filter(p=>p.id!==id);
     renderPersonelGrid();
     showToast('Personel silindi','info');
+  dbAutoSave(["personeller"]);
   });
 }
 
@@ -2164,6 +2166,7 @@ function savePersonel() {
   const soyad=document.getElementById('pSoyad').value.trim();
   const username=document.getElementById('pKadi').value.trim();
   if(!ad||!soyad||!username){showToast('Ad, soyad ve kullanıcı adı zorunludur','error');return;}
+  dbAutoSave(["personeller", "nextPersonelId"]);
   const rol=document.getElementById('pRol').value;
   const permsToSave=rol==='Yonetici'?null:JSON.parse(JSON.stringify(_currentPerms));
   const kategoriler=[...document.querySelectorAll('#pKatContainer input:checked')].map(x=>parseInt(x.value));
@@ -2358,6 +2361,7 @@ function deleteKategori(id) {
 function saveKategori() {
   const ad=document.getElementById('kLabAdi').value.trim();
   if(!ad) { showToast('Lab adı zorunludur','error'); return; }
+  dbAutoSave(["kategoriler", "nextKatId"]);
   const editId=document.getElementById('kategoriModal')._editId;
   const data={ad, sicMin:parseFloat(document.getElementById('kSicMin').value)||20, sicTol:parseFloat(document.getElementById('kSicTol').value)||2, nemMin:parseFloat(document.getElementById('kNemMin').value)||40, nemTol:parseFloat(document.getElementById('kNemTol').value)||10, dosyalar:[]};
   if(editId) { const idx=state.kategoriler.findIndex(k=>k.id===editId); state.kategoriler[idx]={...state.kategoriler[idx],...data}; showToast('Kategori güncellendi','success'); }
@@ -2408,14 +2412,19 @@ function openCihazTipiModal(id=null) {
 }
 function editCihazTipi(id){openCihazTipiModal(id);}
 function deleteCihazTipi(id){ showConfirm('Cihaz tipi silinsin mi?', ()=>{ state.cihazTipleri=state.cihazTipleri.filter(c=>c.id!==id); renderPage('cihazTipleri'); showToast('Silindi','info'); }); }
+  dbAutoSave(["teklifler"]);
+  dbAutoSave(["refCihazlar"]);
 function saveCihazTipi(){
   const ad=document.getElementById('ctAd').value.trim();
   if(!ad){showToast('Cihaz adı zorunlu','error');return;}
+  dbAutoSave(["refCihazlar", "nextRefId"]);
+  dbAutoSave(["cihazTipleri", "nextCihazTipiId"]);
   const editId=document.getElementById('cihazTipiModal')._editId;
   const data={ad,katId:parseInt(document.getElementById('ctKat').value)||null,ucret:parseFloat(document.getElementById('ctUcret').value)||0};
   if(editId){const idx=state.cihazTipleri.findIndex(c=>c.id===editId);state.cihazTipleri[idx]={...state.cihazTipleri[idx],...data};showToast('Güncellendi','success');}
   else{state.cihazTipleri.push({id:state.nextCihazTipiId++,...data});showToast('Eklendi','success');}
   closeModal('cihazTipiModal');renderPage('cihazTipleri');
+  dbAutoSave(["cihazTipleri", "nextCihazTipiId"]);
 }
 
 // ═══════════════════════════════════════════════
@@ -2465,6 +2474,7 @@ function deleteUygunluk(id){showConfirm('Uygunluk tanımı silinsin mi?', ()=>{ 
 function saveUygunluk(){
   const tanim=document.getElementById('uTanim').value.trim();
   if(!tanim){showToast('Tanım zorunlu','error');return;}
+  dbAutoSave(["uygunluklar", "nextUygunlukId"]);
   const editId=document.getElementById('uygunlukModal')._editId;
   const data={tanim,varsayilan:document.getElementById('uVarsayilan').value==='1',cihazTipiId:parseInt(document.getElementById('uCihazTipi').value)||null};
   if(editId){const idx=state.uygunluklar.findIndex(u=>u.id===editId);state.uygunluklar[idx]={...state.uygunluklar[idx],...data};showToast('Güncellendi','success');}
@@ -2665,6 +2675,7 @@ function deleteProsedur(id){showConfirm('Prosedür silinsin mi?', ()=>{ state.pr
 function saveProsedur(){
   const ad=document.getElementById('prAdi').value.trim(),no=document.getElementById('prNo').value.trim();
   if(!ad||!no){showToast('Ad ve no zorunlu','error');return;}
+  dbAutoSave(["prosedurler", "nextProsId"]);
   const editId=document.getElementById('prosedurModal')._editId;
   const data={ad,no,katId:parseInt(document.getElementById('prKat').value)||null,not:document.getElementById('prNot').value,dosyalar:[]};
   if(editId){const idx=state.prosedurler.findIndex(p=>p.id===editId);state.prosedurler[idx]={...state.prosedurler[idx],...data};showToast('Güncellendi','success');}
@@ -2757,6 +2768,7 @@ function deleteMethod(id){showConfirm('Method silinsin mi?', ()=>{ state.methodl
 function saveMethod(){
   const ad=document.getElementById('mAdi').value.trim(),kod=document.getElementById('mKod').value.trim();
   if(!ad||!kod){showToast('Ad ve kod zorunlu','error');return;}
+  dbAutoSave(["methodlar", "nextMethodId"]);
   const prosedurIds=document.getElementById('methodModal')._seciliPros||[];
   const editId=document.getElementById('methodModal')._editId;
   const data={ad,kod,prosedurIds:[...prosedurIds],not:document.getElementById('mNot').value};
@@ -3146,6 +3158,7 @@ function saveKalibrasyon(){
   const sertNo=document.getElementById('kalSertNo').value.trim();
   const yapanId=parseInt(document.getElementById('kalYapan').value);
   if(!tarih||!sertNo||!yapanId){showToast('Tarih, sertifika no ve yapan personel zorunludur','error');return;}
+  dbAutoSave(["kalibrasyon", "nextKalId", "cihazKabuller", "sertifikalar", "nextSertId"]);
   const kayit={
     id:state.nextKalId++,
     cihazId,fisId,
@@ -3288,6 +3301,7 @@ function removeCKCihaz(idx){
 function saveCihazKabul(){
   const firmaId=parseInt(document.getElementById('ckFirma').value);
   if(!firmaId){showToast('Firma seçiniz','error');return;}
+  dbAutoSave(["cihazKabuller", "nextCKId"]);
   const modal=document.getElementById('cihazKabulModal');
   const editId=modal._editId;
   const data={
@@ -3472,6 +3486,7 @@ function saveTeklif(){
   if(editId){const idx=state.teklifler.findIndex(t=>t.id===editId);state.teklifler[idx]={...state.teklifler[idx],...data};showToast('Teklif güncellendi','success');}
   else{artirNumara('teklif');state.teklifler.push({id:state.nextTeklifId++,...data});showToast('Teklif oluşturuldu','success');}
   closeModal('teklifModal');renderPage('teklifler');
+  dbAutoSave(["teklifler", "nextTeklifId"]);
 }
 
 // ═══════════════════════════════════════════════
@@ -3685,6 +3700,7 @@ function saveNumara(tip) {
   const prefix = (document.getElementById('ay_prefix_'+tip)?.value||'').trim().toUpperCase();
   const sayac = parseInt(document.getElementById('ay_sayac_'+tip)?.value)||1;
   if(!prefix){showToast('Prefix boş olamaz','error');return;}
+  dbAutoSave(["numaraAyarlari"]);
   state.numaraAyarlari[tip] = {prefix, sayac};
   showToast('Güncellendi → '+uretNumara(tip),'success');
 }
@@ -3701,6 +3717,7 @@ function saveLabAyarlari() {
     kalYer:    document.getElementById('ayKalYer')?.value.trim()||''
   };
   showToast('Laboratuvar bilgileri kaydedildi','success');
+  dbAutoSave(["labAyarlari"]);
 }
 
 function saveTurkakAyarlari() {
@@ -3711,6 +3728,7 @@ function saveTurkakAyarlari() {
     apiUrl:   document.getElementById('ayTurkakUrl')?.value.trim()||'https://api.turkak.org.tr'
   };
   showToast('Türkak bilgileri kaydedildi','success');
+  dbAutoSave(["turkakAyarlari"]);
 }
 
 async function turkakBaglantiTest() {
@@ -3829,6 +3847,7 @@ function saveAyarlar(){
   const yeniAd=document.getElementById('ayFirmaAdi').value.trim();
   if(yeniAd){document.getElementById('brandName').textContent=yeniAd;}
   showToast('Ayarlar kaydedildi','success');
+  dbAutoSave(["labAyarlari"]);
 }
 
 
@@ -4197,6 +4216,7 @@ function grupImzala(mevcutDurum) {
   if(dtBit) liste = liste.filter(s => (s.tarih||'') <= dtBit);
 
   if(!liste.length) { showToast('Listelenmiş sertifika yok','warning'); return; }
+  dbAutoSave(["sertifikalar"]);
 
   const hedefDurum = mevcutDurum === 'hazirlaniyor' ? 'imzalandi'
                    : mevcutDurum === 'imzalandi'    ? 'onaylandi'
@@ -4363,6 +4383,7 @@ function clearSertifika(id) {
     }
     updateSertBadge();
     showToast('Sertifika içeriği temizlendi. Kal. Başlat butonu tekrar aktif.','success');
+  dbAutoSave(["sertifikalar", "kalibrasyon", "cihazKabuller"]);
     renderPage('sertifikalar');
   });
 }
@@ -4457,6 +4478,62 @@ function uygunlukRowsSorted(list) { return uygunlukRows('', list); }
 // ═══════════════════════════════════════════════
 // CUSTOM CONFIRM
 // ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// NEON DB — STATE KAYDET / YÜKLE
+// ═══════════════════════════════════════════════
+const DB_KEYS = ["firmalar", "personeller", "kategoriler", "cihazTipleri", "refCihazlar", "prosedurler", "methodlar", "musteriCihazlari", "cihazKabuller", "teklifler", "uygunluklar", "anketSorular", "kalibrasyon", "sertifikalar", "nextSertId", "nextKalId", "nextFirmaId", "nextPersonelId", "nextKatId", "nextCihazTipiId", "nextRefId", "nextProsId", "nextMethodId", "nextMCId", "nextCKId", "nextTeklifId", "nextUygunlukId", "numaraAyarlari", "labAyarlari", "turkakAyarlari", "teklifKalemler"];
+let _saveTimer = null;
+let _dbEnabled = true;
+
+async function dbLoadState() {
+  try {
+    const res = await fetch('/api/state');
+    if(!res.ok) { _dbEnabled=false; return; }
+    const data = await res.json();
+    let loaded = 0;
+    for(const key of DB_KEYS) {
+      if(data[key] !== undefined) {
+        state[key] = data[key];
+        loaded++;
+      }
+    }
+    console.log('DB: ' + loaded + ' key yuklendi');
+  } catch(e) {
+    console.warn('DB yuklenemedi:', e.message);
+    _dbEnabled = false;
+  }
+}
+
+async function dbSaveKey(key) {
+  if(!_dbEnabled) return;
+  try {
+    await fetch('/api/state/' + key, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(state[key])
+    });
+  } catch(e) { console.warn('DB kayit hatasi:', key, e.message); }
+}
+
+async function dbSaveBatch(keys) {
+  if(!_dbEnabled) return;
+  const payload = {};
+  for(const k of keys) payload[k] = state[k];
+  try {
+    await fetch('/api/state/batch', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+  } catch(e) { console.warn('DB batch kayit hatasi:', e.message); }
+}
+
+function dbAutoSave(keys) {
+  if(!_dbEnabled) return;
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => dbSaveBatch(keys), 1500);
+}
+
 function showConfirm(msg, onYes) {
   const el = document.createElement('div');
   el.className = 'confirm-overlay';
