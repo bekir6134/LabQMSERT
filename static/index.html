@@ -2635,9 +2635,9 @@ function renderProsedurler(c) {
       <span class="text-muted">${state.prosedurler.length} kayıt</span>
     </div>
     <table id="prTable"><thead><tr>
+      <th class="sortable" onclick="sortTable('pr','katId',this)">Kategori</th>
       <th class="sortable" onclick="sortTable('pr','no',this)">Prosedür No</th>
       <th class="sortable" onclick="sortTable('pr','ad',this)">Prosedür Adı</th>
-      <th class="sortable" onclick="sortTable('pr','katId',this)">Kategori</th>
       <th>Not</th>
       <th>İşlemler</th>
     </tr></thead>
