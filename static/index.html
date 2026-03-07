@@ -4457,9 +4457,9 @@ function uygunlukRowsSorted(list) { return uygunlukRows('', list); }
 // ═══════════════════════════════════════════════
 // NEON DB — STATE KAYDET / YÜKLE
 // ═══════════════════════════════════════════════
-const DB_KEYS = ["firmalar", "personeller", "kategoriler", "cihazTipleri", "refCihazlar", "prosedurler", "methodlar", "musteriCihazlari", "cihazKabuller", "teklifler", "uygunluklar", "anketSorular", "kalibrasyon", "sertifikalar", "nextSertId", "nextKalId", "nextFirmaId", "nextPersonelId", "nextKatId", "nextCihazTipiId", "nextRefId", "nextProsId", "nextMethodId", "nextMCId", "nextCKId", "nextTeklifId", "nextUygunlukId", "numaraAyarlari", "labAyarlari", "turkakAyarlari", "teklifKalemler"];
-let _saveTimer = null;
-let _dbEnabled = true;
+var DB_KEYS = ["firmalar", "personeller", "kategoriler", "cihazTipleri", "refCihazlar", "prosedurler", "methodlar", "musteriCihazlari", "cihazKabuller", "teklifler", "uygunluklar", "anketSorular", "kalibrasyon", "sertifikalar", "nextSertId", "nextKalId", "nextFirmaId", "nextPersonelId", "nextKatId", "nextCihazTipiId", "nextRefId", "nextProsId", "nextMethodId", "nextMCId", "nextCKId", "nextTeklifId", "nextUygunlukId", "numaraAyarlari", "labAyarlari", "turkakAyarlari", "teklifKalemler"];
+var _saveTimer = null;
+var _dbEnabled = true;
 
 async function dbLoadState() {
   try {
