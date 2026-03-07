@@ -232,4 +232,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 def root(): return FileResponse("static/index.html")
 
 @app.get("/{path:path}")
-def catch_all(path: str): return FileResponse("static/index.html")
+def catch_all(path: str):
+    # API rotalarını geçir, sadece frontend route'ları için HTML döndür
+    if path.startswith("api/"):
+        raise HTTPException(404, "Not found")
+    return FileResponse("static/index.html")
