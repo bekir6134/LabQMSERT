@@ -65,22 +65,6 @@ async def get_all_state():
     except Exception as e:
         raise HTTPException(500, str(e))
 
-@app.post("/api/state/{key}")
-async def save_state_key(key: str, request: Request):
-    try:
-        data = await request.json()
-        pool = await get_pool()
-        async with pool.acquire() as conn:
-            await conn.execute("""
-                INSERT INTO app_state (key, value, updated)
-                VALUES ($1, $2::jsonb, NOW())
-                ON CONFLICT (key) DO UPDATE
-                SET value = EXCLUDED.value, updated = NOW()
-            """, key, json.dumps(data))
-        return {"ok": True}
-    except Exception as e:
-        raise HTTPException(500, str(e))
-
 @app.post("/api/state/batch")
 async def save_state_batch(request: Request):
     try:
@@ -98,6 +82,24 @@ async def save_state_batch(request: Request):
         return {"ok": True, "count": len(data)}
     except Exception as e:
         raise HTTPException(500, str(e))
+
+
+@app.post("/api/state/{key}")
+async def save_state_key(key: str, request: Request):
+    try:
+        data = await request.json()
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute("""
+                INSERT INTO app_state (key, value, updated)
+                VALUES ($1, $2::jsonb, NOW())
+                ON CONFLICT (key) DO UPDATE
+                SET value = EXCLUDED.value, updated = NOW()
+            """, key, json.dumps(data))
+        return {"ok": True}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
 
 @app.get("/api/health")
 async def health():
