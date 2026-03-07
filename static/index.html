@@ -2593,14 +2593,22 @@ function openRefCihazModal(id=null){
   rcFileInput.onchange = function(){
     const fl = document.getElementById('rcFileList');
     const files = [...this.files];
-    fl.innerHTML = files.map(f=>`<div class="file-item"><span class="file-item-type">${f.name.split('.').pop().toUpperCase()}</span><span class="file-item-name">${f.name}</span></div>`).join('');
-    // base64 olarak state'e yaz
+    fl.innerHTML = '<div style="font-size:12px;color:var(--accent);padding:4px 8px">⏳ Dosyalar yükleniyor...</div>';
     const modal = document.getElementById('refCihazModal');
     modal._pendingFiles = [];
-    files.forEach(f=>{
+    modal._filesReady = false;
+    const readers = files.map(f=> new Promise(resolve=>{
       const r=new FileReader();
-      r.onload=e=>modal._pendingFiles.push({name:f.name,size:f.size,type:f.type,data:e.target.result.split(',')[1]});
+      r.onload=e=>{
+        modal._pendingFiles.push({name:f.name,size:f.size,type:f.type,data:e.target.result.split(',')[1]});
+        resolve();
+      };
       r.readAsDataURL(f);
+    }));
+    Promise.all(readers).then(()=>{
+      modal._filesReady = true;
+      fl.innerHTML = files.map(f=>`<div class="file-item"><span class="file-item-type">${f.name.split('.').pop().toUpperCase()}</span><span class="file-item-name">${f.name}</span><span style="font-size:11px;color:var(--text3)">${(f.size/1024).toFixed(1)} KB</span></div>`).join('');
+      fl.innerHTML += `<div style="font-size:11px;color:var(--green);padding:4px 8px">✅ ${files.length} dosya hazır</div>`;
     });
   };
   if(id){const r=state.refCihazlar.find(x=>x.id===id);if(r){document.getElementById('rcAdi').value=r.ad;document.getElementById('rcNo').value=r.no;document.getElementById('rcMarka').value=r.marka;document.getElementById('rcModel').value=r.model;document.getElementById('rcSeriNo').value=r.seriNo;document.getElementById('rcKat').value=r.katId||'';document.getElementById('rcKalTarih').value=r.kalTarih||'';document.getElementById('rcSonrakiTarih').value=r.sonrakiTarih||'';document.getElementById('rcKalNo').value=r.kalNo||'';document.getElementById('rcIzlenebilirlik').value=r.izlenebilirlik||'';}}
@@ -2615,6 +2623,10 @@ function saveRefCihaz(){
   const editId=document.getElementById('refCihazModal')._editId;
   const modal_rc=document.getElementById('refCihazModal');
   const existingDosyalar=editId?(state.refCihazlar.find(r=>r.id===editId)?.dosyalar||[]):[];
+  // Dosyalar henüz yüklenmediyse uyar
+  if(modal_rc._pendingFiles?.length > 0 && !modal_rc._filesReady){
+    showToast('Dosyalar henüz hazır değil, lütfen bekleyin','warning'); return;
+  }
   const pendingDosyalar=modal_rc._pendingFiles||[];
   const dosyalar=[...existingDosyalar,...pendingDosyalar];
   const data={ad,no:document.getElementById('rcNo').value,marka:document.getElementById('rcMarka').value,model:document.getElementById('rcModel').value,seriNo:document.getElementById('rcSeriNo').value,katId:parseInt(document.getElementById('rcKat').value)||null,kalTarih:document.getElementById('rcKalTarih').value,sonrakiTarih:document.getElementById('rcSonrakiTarih').value,kalNo:document.getElementById('rcKalNo').value,izlenebilirlik:document.getElementById('rcIzlenebilirlik').value,dosyalar};
@@ -3111,7 +3123,7 @@ function cihazKabulKart(k) {
       </div>
       <!-- Cihaz Tablosu -->
       ${k.cihazlar.length?`<div class="table-wrap" style="border-radius:var(--radius)"><table>
-        <thead><tr><th>Cihaz</th><th>Marka/Model</th><th>Seri No</th><th>Durum</th><th>İşlemler</th></tr></thead>
+        <thead><tr><th>Cihaz</th><th>Marka/Model</th><th>Seri No</th><th>Durum</th><th>Not</th><th>İşlemler</th></tr></thead>
         <tbody>${k.cihazlar.map(ck=>{
           const mc=state.musteriCihazlari.find(x=>x.id===ck.cihazId);
           const dd=DURUM_MAP[ck.durum]||DURUM_MAP['bekliyor'];
@@ -3119,6 +3131,7 @@ function cihazKabulKart(k) {
             <td><strong>${mc?.ad||'?'}</strong></td>
             <td>${mc?.marka||''} ${mc?.model||''}</td>
             <td style="font-family:'DM Mono',monospace;font-size:12px">${mc?.seriNo||'-'}</td>
+            <td style="padding:8px 12px;font-size:11px;color:#aaa">${ck.not||'-'}</td>
             <td>
               <select class="badge" style="background:transparent;border:none;color:inherit;cursor:pointer" onchange="changeCKDurum(${k.id},${ck.cihazId},this.value)">
                 ${Object.entries(DURUM_MAP).map(([v,d2])=>`<option value="${v}" ${ck.durum===v?'selected':''}>${d2.label}</option>`).join('')}
@@ -3934,6 +3947,7 @@ function showFisOnizleme(fisId){
       <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-family:monospace">${mc?.seriNo||'-'}</td>
       <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-family:monospace">${mc?.envNo||'-'}</td>
       <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb">${dd.label}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-size:11px;color:#555">${ck.not||'-'}</td>
     </tr>`;
   }).join('');
 
