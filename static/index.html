@@ -2541,49 +2541,6 @@ function rcRows(filter, list) {
   }).join('');
 }
 
-function filterRefCihaz(v) {
-  const tbody=document.getElementById('rcTbody');
-  if(tbody) tbody.innerHTML=rcRows(v);
-}
-
-
-function rcRows(filter='', list=null) {
-  const data = list || (filter ? state.refCihazlar.filter(r=>
-    (r.ad||'').toLowerCase().includes(filter.toLowerCase()) ||
-    (r.no||'').toLowerCase().includes(filter.toLowerCase()) ||
-    (r.marka||'').toLowerCase().includes(filter.toLowerCase()) ||
-    (r.model||'').toLowerCase().includes(filter.toLowerCase()) ||
-    (r.seriNo||'').toLowerCase().includes(filter.toLowerCase()) ||
-    (r.kalNo||'').toLowerCase().includes(filter.toLowerCase()) ||
-    (r.izlenebilirlik||'').toLowerCase().includes(filter.toLowerCase())
-  ) : state.refCihazlar);
-  if(!data.length) return `<tr><td colspan="12" class="table-empty">Kayıt bulunamadı.</td></tr>`;
-  return data.map(r=>{
-    const kat=state.kategoriler.find(k=>k.id===r.katId);
-    const exp=new Date(r.sonrakiTarih); const diff=Math.round((exp-new Date())/(1000*60*60*24));
-    const cls=diff<30?'badge-red':diff<90?'badge-orange':'badge-green';
-    const kalan=r.sonrakiTarih?(diff>0?`<span class="badge ${cls}">${diff} gün</span>`:`<span class="badge badge-red">Süresi doldu</span>`):`<span style="color:var(--text3)">-</span>`;
-    return `<tr>
-      <td><strong>${r.ad}</strong></td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px">${r.no||'-'}</td>
-      <td>${r.marka||'-'}</td>
-      <td>${r.model||'-'}</td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px">${r.seriNo||'-'}</td>
-      <td>${kat?`<span class="chip">${kat.ad}</span>`:'-'}</td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px">${r.kalNo||'-'}</td>
-      <td>${r.kalTarih||'-'}</td>
-      <td>${r.sonrakiTarih||'-'}</td>
-      <td>${r.izlenebilirlik||'-'}</td>
-      <td>${kalan}</td>
-      <td><div style="display:flex;gap:4px;flex-wrap:wrap">
-        <button class="btn btn-secondary btn-xs" onclick="editRefCihaz(${r.id})">✏️</button>
-        <button class="btn btn-danger btn-xs" onclick="deleteRefCihaz(${r.id})">🗑️</button>
-        <button class="btn btn-blue btn-xs" onclick="showToast('Kalibrasyon ekleme yakında','info')">📅 Kal. Ekle</button>
-        <button class="btn btn-secondary btn-xs" onclick="openDosyaModal('refCihaz',${r.id})">📎 (${r.dosyalar?.length||0})</button>
-      </div></td>
-    </tr>`;
-  }).join('');
-}
 
 function filterRefCihaz(v) {
   const tbody=document.getElementById('rcTbody');
