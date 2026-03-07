@@ -878,6 +878,9 @@ th.sort-desc::after { content:' ↓'; opacity:1; color:var(--accent2); }
       </div>
       <div class="form-row">
         <div class="form-field"><label>Görev</label><input id="pGorev" placeholder="Kalibrasyon Teknisyeni"></div>
+        <div class="form-field"><label>Uzmanlık Alanları</label><input id="pAlanlar" placeholder="Elektrik, Sıcaklık..."></div>
+      </div>
+      <div class="form-row">
         <div class="form-field"><label>Eğitim Durumu</label>
           <select id="pEgitim">
             <option>İlköğretim</option><option>Lise</option><option>Ön Lisans</option>
@@ -2138,12 +2141,12 @@ function setPermVal(mod,key,val){
 function openPersonelModal(id=null) {
   _editPersonelId=id;
   document.getElementById('pModalTitle').textContent=id?'Personel Düzenle':'Personel Ekle';
-  ['pAd','pSoyad','pGorev','pAlanlar','pKadi','pSifre'].forEach(x=>document.getElementById(x).value='');
-  document.getElementById('pEgitim').value='Lisans';
-  document.getElementById('pRol').value='Goruntuleyebilir';
-  document.getElementById('pActive').value='true';
-  document.getElementById('pKalPers').value='0';
-  document.getElementById('pSertOnay').value='0';
+  ['pAd','pSoyad','pGorev','pAlanlar','pKadi','pSifre'].forEach(x=>{const el=document.getElementById(x);if(el)el.value=''; else console.warn('MISSING:',x);});
+  const _pEgitim=document.getElementById('pEgitim'); if(_pEgitim)_pEgitim.value='Lisans'; else console.warn('MISSING: pEgitim');
+  const _pRol=document.getElementById('pRol'); if(_pRol)_pRol.value='Goruntuleyebilir'; else console.warn('MISSING: pRol');
+  const _pActive=document.getElementById('pActive'); if(_pActive)_pActive.value='true'; else console.warn('MISSING: pActive');
+  const _pKalPers=document.getElementById('pKalPers'); if(_pKalPers)_pKalPers.value='0'; else console.warn('MISSING: pKalPers');
+  const _pSertOnay=document.getElementById('pSertOnay'); if(_pSertOnay)_pSertOnay.value='0'; else console.warn('MISSING: pSertOnay');
   _currentPerms=JSON.parse(JSON.stringify(PERSONEL_DEFAULT_PERMS['Goruntuleyebilir']));
   _currentPermsRol='Goruntuleyebilir';
   // Kategoriler
@@ -2152,7 +2155,7 @@ function openPersonelModal(id=null) {
     <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:4px 8px;background:var(--bg3);border-radius:4px;border:1px solid var(--border)">
       <input type="checkbox" value="${k.id}" style="accent-color:var(--accent)"> ${k.ad}
     </label>`).join('');
-  // Reset tabs
+  // Reset tabs (varsa)
   document.querySelectorAll('#pModalTabs .tab-btn').forEach((t,i)=>t.classList.toggle('active',i===0));
   document.querySelectorAll('#personelModal .tab-panel').forEach((t,i)=>t.classList.toggle('active',i===0));
   if(id){
