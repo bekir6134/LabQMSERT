@@ -1217,7 +1217,12 @@ th.sort-desc::after { content:' ↓'; opacity:1; color:var(--accent2); }
     </div>
     <div class="modal-body">
       <div class="form-row">
-        <div class="form-field"><label class="required">Cihaz Adı</label><input id="rcAdi"></div>
+        <div class="form-field"><label class="required">Cihaz Adı</label>
+          <select id="rcCihazTipi" onchange="if(this.value){document.getElementById('rcAdi').value=state.cihazTipleri.find(t=>t.id===parseInt(this.value))?.ad||'';}" style="margin-bottom:4px">
+            <option value="">Cihaz Tipinden Seç...</option>
+          </select>
+          <input id="rcAdi" placeholder="veya manuel girin">
+        </div>
         <div class="form-field"><label>Cihaz No / Kodu</label><input id="rcNo"></div>
       </div>
       <div class="form-row">
@@ -2338,7 +2343,11 @@ function saveKategori() {
   const ad=document.getElementById('kLabAdi').value.trim();
   if(!ad) { showToast('Lab adı zorunludur','error'); return; }
   const editId=document.getElementById('kategoriModal')._editId;
-  const data={ad, sicMin:parseFloat(document.getElementById('kSicMin').value)||20, sicTol:parseFloat(document.getElementById('kSicTol').value)||2, nemMin:parseFloat(document.getElementById('kNemMin').value)||40, nemTol:parseFloat(document.getElementById('kNemTol').value)||10, dosyalar:[]};
+  const data={ad, sicMin:parseFloat(document.getElementById('kSicMin').value)||20, sicTol:parseFloat(document.getElementById('kSicTol').value)||2, nemMin:parseFloat(document.getElementById('kNemMin').value)||40, nemTol:parseFloat(document.getElementById('kNemTol').value)||10, dosyalar: (()=>{
+    const pending = document.getElementById('refCihazModal')._pendingFiles||[];
+    const existing = editId ? (state.refCihazlar.find(r=>r.id===editId)?.dosyalar||[]) : [];
+    return pending.length ? [...existing, ...pending] : existing;
+  })()};
   if(editId) { const idx=state.kategoriler.findIndex(k=>k.id===editId); state.kategoriler[idx]={...state.kategoriler[idx],...data}; showToast('Kategori güncellendi','success'); }
   else { state.kategoriler.push({id:state.nextKatId++,...data}); showToast('Kategori eklendi','success'); }
   closeModal('kategoriModal'); renderPage('kategoriler');
@@ -2471,12 +2480,12 @@ function renderRefCihazlar(c) {
     <div style="overflow-x:auto">
     <table id="rcTable">
       <thead><tr>
+        <th class="sortable" onclick="sortTable('rc','katId',this)">Kategori</th>
         <th class="sortable" onclick="sortTable('rc','ad',this)">Cihaz Adı</th>
         <th class="sortable" onclick="sortTable('rc','no',this)">No/Kod</th>
         <th class="sortable" onclick="sortTable('rc','marka',this)">Marka</th>
         <th class="sortable" onclick="sortTable('rc','model',this)">Model</th>
         <th class="sortable" onclick="sortTable('rc','seriNo',this)">Seri No</th>
-        <th class="sortable" onclick="sortTable('rc','katId',this)">Kategori</th>
         <th class="sortable" onclick="sortTable('rc','kalNo',this)">Kal. No</th>
         <th class="sortable" onclick="sortTable('rc','kalTarih',this)">Kal. Tarihi</th>
         <th class="sortable" onclick="sortTable('rc','sonrakiTarih',this)">Sonraki Kal.</th>
@@ -2503,15 +2512,15 @@ function rcRows(filter, list) {
     const kalan=diff===null?'<span style="color:var(--text3)">-</span>'
       :diff>0?`<span class="badge ${cls}">${diff} gün</span>`:`<span class="badge badge-red">Süresi doldu</span>`;
     return `<tr>
+      <td>${kat?`<span class="chip">${kat.ad}</span>`:'-'}</td>
       <td><strong>${r.ad}</strong></td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${r.no||'-'}</td>
       <td>${r.marka||'-'}</td>
       <td>${r.model||'-'}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${r.seriNo||'-'}</td>
-      <td>${kat?`<span class="chip">${kat.ad}</span>`:'-'}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${r.kalNo||'-'}</td>
-      <td>${r.kalTarih||'-'}</td>
-      <td>${r.sonrakiTarih||'-'}</td>
+      <td>${(r.kalTarih?r.kalTarih.split('-').reverse().join('.'):'−')}</td>
+      <td>${(r.sonrakiTarih?r.sonrakiTarih.split('-').reverse().join('.'):'−')}</td>
       <td>${r.izlenebilirlik||'-'}</td>
       <td>${kalan}</td>
       <td><div style="display:flex;gap:3px;flex-wrap:wrap">
@@ -2576,10 +2585,28 @@ function filterRefCihaz(v) {
 }
 
 function openRefCihazModal(id=null){
+  const ctSel=document.getElementById('rcCihazTipi');
+  if(ctSel) ctSel.innerHTML='<option value="">Cihaz Tipinden Seç...</option>'+state.cihazTipleri.map(t=>`<option value="${t.id}">${t.ad}</option>`).join('');
   const sel=document.getElementById('rcKat');
   sel.innerHTML='<option value="">Seçiniz</option>'+state.kategoriler.map(k=>`<option value="${k.id}">${k.ad}</option>`).join('');
   ['rcAdi','rcNo','rcMarka','rcModel','rcSeriNo','rcKalTarih','rcSonrakiTarih','rcKalNo','rcIzlenebilirlik'].forEach(x=>document.getElementById(x).value='');
   document.getElementById('rcFileList').innerHTML='';
+  document.getElementById('rcFile').value='';
+  // Dosya seçilince listeye ekle
+  const rcFileInput = document.getElementById('rcFile');
+  rcFileInput.onchange = function(){
+    const fl = document.getElementById('rcFileList');
+    const files = [...this.files];
+    fl.innerHTML = files.map(f=>`<div class="file-item"><span class="file-item-type">${f.name.split('.').pop().toUpperCase()}</span><span class="file-item-name">${f.name}</span></div>`).join('');
+    // base64 olarak state'e yaz
+    const modal = document.getElementById('refCihazModal');
+    modal._pendingFiles = [];
+    files.forEach(f=>{
+      const r=new FileReader();
+      r.onload=e=>modal._pendingFiles.push({name:f.name,size:f.size,type:f.type,data:e.target.result.split(',')[1]});
+      r.readAsDataURL(f);
+    });
+  };
   if(id){const r=state.refCihazlar.find(x=>x.id===id);if(r){document.getElementById('rcAdi').value=r.ad;document.getElementById('rcNo').value=r.no;document.getElementById('rcMarka').value=r.marka;document.getElementById('rcModel').value=r.model;document.getElementById('rcSeriNo').value=r.seriNo;document.getElementById('rcKat').value=r.katId||'';document.getElementById('rcKalTarih').value=r.kalTarih||'';document.getElementById('rcSonrakiTarih').value=r.sonrakiTarih||'';document.getElementById('rcKalNo').value=r.kalNo||'';document.getElementById('rcIzlenebilirlik').value=r.izlenebilirlik||'';}}
   document.getElementById('refCihazModal')._editId=id;
   openModal('refCihazModal');
@@ -2624,9 +2651,9 @@ function prRows(filter, list) {
   return src.map(p=>{
     const kat=state.kategoriler.find(k=>k.id===p.katId);
     return `<tr>
+      <td>${kat?`<span class="chip">${kat.ad}</span>`:'-'}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${p.no}</td>
       <td><strong>${p.ad}</strong></td>
-      <td>${kat?.ad||'-'}</td>
       <td style="font-size:12px;color:var(--text3)">${p.not||'-'}</td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-secondary btn-xs" onclick="editProsedur(${p.id})">✏️</button>
@@ -2701,6 +2728,14 @@ function openMethodModal(id=null){
   document.getElementById('methodModal')._editId=id;
   document.getElementById('methodModal')._seciliPros=secili;
   renderProsedurChecklist('');
+  // Referans cihazlar
+  const mrc = document.getElementById('mRefCihazContainer');
+  if(mrc){
+    const sel = id ? (state.methodlar.find(x=>x.id===id)?.refCihazIds||[]) : [];
+    mrc.innerHTML = state.refCihazlar.length
+      ? state.refCihazlar.map(r=>`<label style="display:flex;align-items:center;gap:6px;padding:4px 8px;cursor:pointer"><input type="checkbox" value="${r.id}" ${sel.includes(r.id)?'checked':''}> ${r.ad} ${r.no?'('+r.no+')':''}</label>`).join('')
+      : '<span style="color:var(--text3);font-size:12px;padding:4px 8px">Referans cihaz tanımlanmamış</span>';
+  }
   openModal('methodModal');
 }
 
@@ -2747,7 +2782,8 @@ function saveMethod(){
   if(!ad||!kod){showToast('Ad ve kod zorunlu','error');return;}
   const prosedurIds=document.getElementById('methodModal')._seciliPros||[];
   const editId=document.getElementById('methodModal')._editId;
-  const data={ad,kod,prosedurIds:[...prosedurIds],not:document.getElementById('mNot').value};
+  const refCihazIds=[...document.querySelectorAll('#mRefCihazContainer input:checked')].map(x=>parseInt(x.value));
+  const data={refCihazIds,ad,kod,prosedurIds:[...prosedurIds],not:document.getElementById('mNot').value};
   if(editId){const idx=state.methodlar.findIndex(m=>m.id===editId);state.methodlar[idx]={...state.methodlar[idx],...data};showToast('Güncellendi','success');}
   else{state.methodlar.push({id:state.nextMethodId++,...data});showToast('Eklendi','success');}
   closeModal('methodModal');renderPage('methodlar');
@@ -4655,7 +4691,12 @@ function silDosya(idx, key) {
 // ═══════════════════════════════════════════════
 // UTILITIES
 // ═══════════════════════════════════════════════
-function openModal(id){document.getElementById(id).classList.add('open');}
+function openModal(id){
+  const overlay=document.getElementById(id);
+  overlay.classList.add('open');
+  // Backdrop tıklaması modal KAPATMASIN
+  overlay.onclick=null;
+}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 
 document.querySelectorAll('.modal-overlay').forEach(o=>{
