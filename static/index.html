@@ -4696,12 +4696,13 @@ function openModal(id){
   overlay.classList.add('open');
   // Backdrop tıklaması modal KAPATMASIN
   overlay.onclick=null;
+  // Modal içine tıklayınca overlay'e yayılmasın
+  const modalBox = overlay.querySelector('.modal');
+  if(modalBox) modalBox.onclick = e => e.stopPropagation();
 }
-function closeModal(id){document.getElementById(id).classList.remove('open');}
+function closeModal(id){const el=document.getElementById(id); el.classList.remove('open'); el.onclick=null;}
 
-document.querySelectorAll('.modal-overlay').forEach(o=>{
-  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});
-});
+// backdrop click kapatma devre dışı
 
 function addMultiInput(groupId, placeholder=''){
   const g=document.getElementById(groupId);
