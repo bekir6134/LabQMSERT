@@ -2,34 +2,29 @@ from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.routing import APIRouter
 from pydantic import BaseModel
 from typing import Optional
 import httpx, os, asyncio, json
 from datetime import datetime, timedelta
 import asyncpg
 
-app = FastAPI(title="LabQCert API")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+# ── API router (tüm /api rotaları burada)
+api = APIRouter(prefix="/api")
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 _token_cache: dict = {}
 TURKAK_BASE  = "https://api.turkak.org.tr"
 _pool = None
 
-# asyncpg için URL'deki ?sslmode=require&channel_binding=require parametrelerini kaldır
 def clean_db_url(url: str) -> str:
-    if "?" in url:
-        url = url.split("?")[0]
-    return url
+    return url.split("?")[0] if "?" in url else url
 
 async def get_pool():
     global _pool
     if _pool is None:
         _pool = await asyncpg.create_pool(
-            clean_db_url(DATABASE_URL),
-            ssl="require",
-            min_size=1, max_size=5
-        )
+            clean_db_url(DATABASE_URL), ssl="require", min_size=1, max_size=5)
     return _pool
 
 async def init_db():
@@ -47,15 +42,18 @@ async def init_db():
     except Exception as e:
         print("DB init error:", e)
 
-@app.on_event("startup")
-async def startup():
-    if DATABASE_URL:
-        await init_db()
-    else:
-        print("WARNING: DATABASE_URL yok")
+# ── STATE ─────────────────────────────────────
+@api.get("/health")
+async def health():
+    try:
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            await conn.fetchval("SELECT 1")
+        return {"db": "ok"}
+    except Exception as e:
+        return {"db": "error", "detail": str(e)}
 
-# ─── STATE API ───────────────────────────────
-@app.get("/api/state")
+@api.get("/state")
 async def get_all_state():
     try:
         pool = await get_pool()
@@ -65,7 +63,7 @@ async def get_all_state():
     except Exception as e:
         raise HTTPException(500, str(e))
 
-@app.post("/api/state-batch")
+@api.post("/state-batch")
 async def save_state_batch(request: Request):
     try:
         data = await request.json()
@@ -77,14 +75,13 @@ async def save_state_batch(request: Request):
                         INSERT INTO app_state (key, value, updated)
                         VALUES ($1, $2::jsonb, NOW())
                         ON CONFLICT (key) DO UPDATE
-                        SET value = EXCLUDED.value, updated = NOW()
+                        SET value=EXCLUDED.value, updated=NOW()
                     """, key, json.dumps(value))
         return {"ok": True, "count": len(data)}
     except Exception as e:
         raise HTTPException(500, str(e))
 
-
-@app.post("/api/state/{key}")
+@api.post("/state/{key}")
 async def save_state_key(key: str, request: Request):
     try:
         data = await request.json()
@@ -94,24 +91,13 @@ async def save_state_key(key: str, request: Request):
                 INSERT INTO app_state (key, value, updated)
                 VALUES ($1, $2::jsonb, NOW())
                 ON CONFLICT (key) DO UPDATE
-                SET value = EXCLUDED.value, updated = NOW()
+                SET value=EXCLUDED.value, updated=NOW()
             """, key, json.dumps(data))
         return {"ok": True}
     except Exception as e:
         raise HTTPException(500, str(e))
 
-
-@app.get("/api/health")
-async def health():
-    try:
-        pool = await get_pool()
-        async with pool.acquire() as conn:
-            await conn.fetchval("SELECT 1")
-        return {"db": "ok"}
-    except Exception as e:
-        return {"db": "error", "detail": str(e)}
-
-# ─── TÜRKAK API ──────────────────────────────
+# ── TÜRKAK ────────────────────────────────────
 class TokenRequest(BaseModel):
     username: str; password: str; apiUrl: Optional[str] = TURKAK_BASE
 
@@ -148,7 +134,7 @@ async def turkak_get_token(username, password, api_url):
             "expires": datetime.now() + timedelta(hours=11, minutes=50)}
         return token
 
-@app.post("/api/turkak/token")
+@api.post("/turkak/token")
 async def get_token(req: TokenRequest):
     try:
         token = await turkak_get_token(req.username, req.password, req.apiUrl)
@@ -159,7 +145,7 @@ async def get_token(req: TokenRequest):
     except Exception as e:
         raise HTTPException(500, str(e))
 
-@app.post("/api/turkak/numara-al")
+@api.post("/turkak/numara-al")
 async def numara_al(req: NumaraAlRequest):
     try:
         api_url = req.apiUrl or TURKAK_BASE
@@ -181,15 +167,17 @@ async def numara_al(req: NumaraAlRequest):
             "CalibrationDate": f"{kal_tarih}T00:00:00",
             "FirstReleaseDateOfTheDocument": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")}]
         async with httpx.AsyncClient(timeout=15) as client:
-            r = await client.post(f"{api_url}/TBDS/api/v1/CalibrationService/CalibrationCertificateSaveData/", json=payload, headers=headers)
+            r = await client.post(f"{api_url}/TBDS/api/v1/CalibrationService/CalibrationCertificateSaveData/",
+                                  json=payload, headers=headers)
             result = r.json()
-        item1 = result.get("Item1",[]); item2 = result.get("Item2",[])
+        item1=result.get("Item1",[]); item2=result.get("Item2",[])
         if not item1 and item2: raise HTTPException(400, item2[0].get("ErrorDescription","Kayit hatasi"))
         if not item1: raise HTTPException(400, "Sertifika kaydedilemedi")
         cert_id = item1[0]["ID"]
         await asyncio.sleep(2)
         async with httpx.AsyncClient(timeout=15) as client:
-            r2 = await client.get(f"{api_url}/TBDS/api/v1/CalibrationService/CalibrationCertificateGetCertificate/{cert_id}", headers=headers)
+            r2 = await client.get(f"{api_url}/TBDS/api/v1/CalibrationService/CalibrationCertificateGetCertificate/{cert_id}",
+                                  headers=headers)
             cert_data = r2.json()
         return {"id": cert_id, "tbdsNo": cert_data.get("TBDSNumber",""),
                 "sertNo": cert_data.get("CertificationBodyDocumentNumber",""),
@@ -197,29 +185,31 @@ async def numara_al(req: NumaraAlRequest):
     except HTTPException: raise
     except Exception as e: raise HTTPException(500, str(e))
 
-@app.get("/api/turkak/sertifika-durum/{cert_id}")
+@api.get("/turkak/sertifika-durum/{cert_id}")
 async def sertifika_durum(cert_id: str, authorization: str=Header(None), x_api_url: str=Header(None)):
     token = (authorization or "").replace("Bearer ","").strip()
     api_url = x_api_url or TURKAK_BASE
     if not token: raise HTTPException(401, "Token gerekli")
     try:
         async with httpx.AsyncClient(timeout=15) as client:
-            r = await client.get(f"{api_url}/TBDS/api/v1/CalibrationService/CalibrationCertificateGetCertificate/{cert_id}",
-                                 headers={"Authorization": f"Bearer {token}"})
+            r = await client.get(
+                f"{api_url}/TBDS/api/v1/CalibrationService/CalibrationCertificateGetCertificate/{cert_id}",
+                headers={"Authorization": f"Bearer {token}"})
             data = r.json()
         return {"id": data.get("ID",""), "tbdsNo": data.get("TBDSNumber",""),
                 "sertNo": data.get("CertificationBodyDocumentNumber",""),
                 "state": data.get("State","")}
     except Exception as e: raise HTTPException(500, str(e))
 
-@app.post("/api/turkak/revize")
+@api.post("/turkak/revize")
 async def revize(req: RevizeRequest):
     api_url = req.apiUrl or TURKAK_BASE
     headers = {"Authorization": f"Bearer {req.token}"}
     payload = [{"ID": req.tbdsId, "RevisionDate": req.revizeTarih, "RevisionNote": req.revizeNot}]
     try:
         async with httpx.AsyncClient(timeout=15) as client:
-            r = await client.post(f"{api_url}/TBDS/api/v1/CalibrationService/CalibrationCertificateSaveData/", json=payload, headers=headers)
+            r = await client.post(f"{api_url}/TBDS/api/v1/CalibrationService/CalibrationCertificateSaveData/",
+                                  json=payload, headers=headers)
             result = r.json()
         item1=result.get("Item1",[]); item2=result.get("Item2",[])
         if item2 and not item1: raise HTTPException(400, item2[0].get("ErrorDescription","Revize hatasi"))
@@ -227,15 +217,28 @@ async def revize(req: RevizeRequest):
     except HTTPException: raise
     except Exception as e: raise HTTPException(500, str(e))
 
-# ── Static
+# ── APP ───────────────────────────────────────
+app = FastAPI(title="LabQCert")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# Önce API router'ı ekle
+app.include_router(api)
+
+# Sonra startup
+@app.on_event("startup")
+async def startup():
+    if DATABASE_URL:
+        await init_db()
+    else:
+        print("WARNING: DATABASE_URL yok")
+
+# En sona static + catch_all
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
-def root(): return FileResponse("static/index.html")
+def root():
+    return FileResponse("static/index.html")
 
 @app.get("/{path:path}")
 def catch_all(path: str):
-    # API rotalarını geçir, sadece frontend route'ları için HTML döndür
-    if path.startswith("api/"):
-        raise HTTPException(404, "Not found")
     return FileResponse("static/index.html")
