@@ -4548,13 +4548,13 @@ function sertOnizle() {
   const toplamSayfa2 = toplamSayfa;
 
   const olcumPdfSection = hasPdf ? `
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>
+    <scr' + 'ipt src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>
     <div id="pdfPagesContainer" style="background:#f0f0f0;padding:4mm 0">
       <div class="pdf-loading" style="text-align:center;padding:30px;font-family:Arial;font-size:13px;color:#555">
         ⏳ Ölçüm sayfaları yükleniyor...
       </div>
     </div>
-    <script>
+    <scr' + 'ipt>
     (async function() {
       const pdfjsLib = window['pdfjs-dist/build/pdf'];
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -4945,7 +4945,7 @@ function sertOnizle() {
 
 ${olcumPdfSection}
 
-<script>
+<scr' + 'ipt>
 function doPrint() {
   const container = document.getElementById('pdfPagesContainer');
   if(container) {
@@ -4957,7 +4957,7 @@ function doPrint() {
   }
   window.print();
 }
-<\/script>
+<\/scr' + 'ipt>
 
 </body></html>`;
 
@@ -5114,6 +5114,7 @@ function sertOnizleById(sertId) {
 }
 
 
+function grupImzala(mevcutDurum) {
   // Filtre uygulanmış görünür sertifikaları al
   const q     = (document.getElementById('sertArama')?.value||'').toLowerCase();
   const dtBas = document.getElementById('sertTarihBas')?.value||'';
