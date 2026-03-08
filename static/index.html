@@ -2873,6 +2873,7 @@ function openMusteriCihazModal(id=null){
   const _katSel=document.getElementById('mcKategori');
   if(_katSel) _katSel.innerHTML='<option value="">Seçiniz</option>'+state.kategoriler.map(k=>`<option value="${k.id}">${k.ad}</option>`).join('');
   if(id){const mc=state.musteriCihazlari.find(x=>x.id===id);if(mc){document.getElementById('mcMusteri').value=mc.musteriId;document.getElementById('mcAdi').value=mc.ad;document.getElementById('mcMarka').value=mc.marka||'';document.getElementById('mcModel').value=mc.model||'';document.getElementById('mcSeriNo').value=mc.seriNo||'';document.getElementById('mcEnvNo').value=mc.envNo||'';document.getElementById('mcOlcumAraligi').value=mc.olcumAraligi||'';document.getElementById('mcCozunurluk').value=mc.cozunurluk||'';document.getElementById('mcMethod').value=mc.methodKod||'';document.getElementById('mcUygunluk').value=mc.uygunlukId||'';document.getElementById('mcKalYer').value=mc.kalYer||'';document.getElementById('mcDegKrit').value=mc.degKrit||'';document.getElementById('mcNot').value=mc.not||'';if(_katSel)_katSel.value=mc.kategoriId||'';}}
+  document.getElementById('musteriCihazModal')._editId = id || null;
   openModal('musteriCihazModal');
 }
 function editMCihaz(id){openMusteriCihazModal(id);}
