@@ -1642,7 +1642,7 @@ const state = {
   kalibrasyon: [],
   sertifikalar: [],
   nextSertId: 1,
-  labAyarlari: {akredNo:'',akredTarih:'',labAdi:'',labAdres:'',labTel:'',labMail:'',labWeb:'',kalYer:'',labLogo:'',turkakLogo:''},
+  labAyarlari: {akredNo:'',akredTarih:'',labAdi:'',labAdres:'',labTel:'',labMail:'',labWeb:'',kalYer:'',labLogo:'',turkakLogo:'',muhurLogo:''},
   turkakAyarlari: {username:'',password:'',apiUrl:'https://api.turkak.org.tr',token:'',tokenExpiry:'',baglanti:''},
   nextKalId: 1,
   lastCopiedCihaz: null,
@@ -3848,6 +3848,20 @@ function renderAyarlar(c) {
             </div>
           </div>
         </div>
+        <div class="form-row" style="margin-top:12px">
+          <div class="form-field">
+            <label>Mühür / Kaşe (sol alt imza)</label>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px">
+              ${state.labAyarlari?.muhurLogo ? `<img src="${state.labAyarlari.muhurLogo}" style="height:70px;max-width:120px;object-fit:contain;border:1px solid var(--border);border-radius:50%;padding:4px;background:#fff">` : `<div style="width:70px;height:70px;border:1px dashed var(--border2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3);text-align:center">Mühür yok</div>`}
+              <div>
+                <input type="file" id="ayMuhurFile" accept="image/*" style="display:none" onchange="ayLogoYukle('muhur')">
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('ayMuhurFile').click()">📂 Mühür Seç</button>
+                ${state.labAyarlari?.muhurLogo ? `<button class="btn btn-danger btn-sm" style="margin-left:6px" onclick="ayLogoSil('muhur')">🗑️ Sil</button>` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="form-field"></div>
+        </div>
       </div>
 
       <!-- Türkak TBDS Entegrasyonu -->
@@ -3924,24 +3938,26 @@ function saveLabAyarlari() {
     labWeb:    document.getElementById('ayLabWeb')?.value.trim()||'',
     kalYer:    document.getElementById('ayKalYer')?.value.trim()||'',
     labLogo:   state.labAyarlari?.labLogo||'',
-    turkakLogo:state.labAyarlari?.turkakLogo||''
+    turkakLogo:state.labAyarlari?.turkakLogo||'',
+    muhurLogo: state.labAyarlari?.muhurLogo||''
   };
   showToast('Laboratuvar bilgileri kaydedildi','success');
   dbAutoSave(["labAyarlari"]);
 }
 
 function ayLogoYukle(tip) {
-  const inputId = tip==='lab' ? 'ayLabLogoFile' : 'ayTurkakLogoFile';
+  const inputId = tip==='lab' ? 'ayLabLogoFile' : tip==='turkak' ? 'ayTurkakLogoFile' : 'ayMuhurFile';
   const file = document.getElementById(inputId)?.files[0];
   if(!file) return;
   const reader = new FileReader();
   reader.onload = function(e) {
     if(!state.labAyarlari) state.labAyarlari = {};
     if(tip==='lab') state.labAyarlari.labLogo = e.target.result;
-    else state.labAyarlari.turkakLogo = e.target.result;
+    else if(tip==='turkak') state.labAyarlari.turkakLogo = e.target.result;
+    else state.labAyarlari.muhurLogo = e.target.result;
     dbAutoSave(['labAyarlari']);
     renderPage('ayarlar');
-    showToast('Logo yüklendi','success');
+    showToast('Görsel yüklendi','success');
   };
   reader.readAsDataURL(file);
 }
@@ -3949,10 +3965,11 @@ function ayLogoYukle(tip) {
 function ayLogoSil(tip) {
   if(!state.labAyarlari) return;
   if(tip==='lab') state.labAyarlari.labLogo = '';
-  else state.labAyarlari.turkakLogo = '';
+  else if(tip==='turkak') state.labAyarlari.turkakLogo = '';
+  else state.labAyarlari.muhurLogo = '';
   dbAutoSave(['labAyarlari']);
   renderPage('ayarlar');
-  showToast('Logo silindi','info');
+  showToast('Silindi','info');
 }
 
 function saveTurkakAyarlari() {
@@ -4439,14 +4456,14 @@ function sertOnizle() {
   const kal   = state.kalibrasyon.find(k=>k.id===s.kalId);
   const det   = s.detay || {};
   const ay    = state.labAyarlari || {};
-  const labAd    = ay.labAdi || document.getElementById('brandName')?.textContent || 'Laboratuvar';
-  const labLogo    = ay.labLogo    || '';
-  const turkakLogo = ay.turkakLogo || '';
-  const labAdres   = ay.labAdres   || '';
-  const labTel     = ay.labTel     || '';
-  const labMail    = ay.labMail    || '';
-  const labWeb     = ay.labWeb     || '';
-  const akredNo    = ay.akredNo    || '';
+  const labAd     = ay.labAdi    || document.getElementById('brandName')?.textContent || 'Laboratuvar';
+  const labLogo   = ay.labLogo   || '';
+  const turkakLogo= ay.turkakLogo|| '';
+  const muhurLogo = ay.muhurLogo || '';
+  const labAdres  = ay.labAdres  || '';
+  const labTel    = ay.labTel    || '';
+  const labMail   = ay.labMail   || '';
+  const akredNo   = ay.akredNo   || '';
 
   const sertNo      = document.getElementById('sdSertNo').value || s.no || '—';
   const yayimTarih  = document.getElementById('sdYayimTarih').value || det.yayimTarih || '';
@@ -4456,340 +4473,349 @@ function sertOnizle() {
   const gorus       = document.getElementById('sdGorus').value || det.gorus || '';
   const prosedurStr = document.getElementById('sdProsedur').value || '';
   const refCihazStr = document.getElementById('sdRefCihazlar').value || '';
-  const sayfaStr    = document.getElementById('sdSayfaSayisi').value || '';
   const yapan       = document.getElementById('sdYapan').value || '';
   const onaylayan   = document.getElementById('sdOnaylayan').value || '';
+  const toplamSayfa = s.ekPdfSayfa ? (s.ekPdfSayfa + 2) : '?';
 
   const fmtTarih = v => {
     if(!v||v==='-') return '-';
     return v.includes('-') ? v.split('-').reverse().join('.') : v;
   };
 
-  // Toplam sayfa sayısı (sayısal)
-  const toplamSayfa = s.ekPdfSayfa ? (s.ekPdfSayfa + 2) : sayfaStr.replace(/[^0-9]/g,'') || '?';
+  const prosedurRows = prosedurStr
+    ? prosedurStr.split(',').map(p=>p.trim()).filter(Boolean).map(p=>{
+        const parts = p.split(' - ');
+        return `<tr><td style="padding:4px 8px;border:1px solid #ccc">${parts[0]||p}</td><td style="padding:4px 8px;border:1px solid #ccc">${parts.slice(1).join(' - ')||''}</td></tr>`;
+      }).join('')
+    : '<tr><td colspan="2" style="padding:4px 8px;border:1px solid #ccc;color:#888">—</td></tr>';
 
-  // Prosedürler — satır satır
-  const prosedurRows = prosedurStr ? prosedurStr.split(',').map(p=>p.trim()).filter(Boolean).map(p=>{
-    const parts = p.split(' - ');
-    return `<tr><td style="padding:4px 8px;border:1px solid #ccc">${parts[0]||p}</td><td style="padding:4px 8px;border:1px solid #ccc">${parts.slice(1).join(' - ')||''}</td></tr>`;
-  }).join('') : '<tr><td colspan="2" style="padding:4px 8px;border:1px solid #ccc;color:#888">—</td></tr>';
+  const refRows = refCihazStr
+    ? refCihazStr.split('\n').filter(Boolean).map(r=>{
+        const p = r.split('|').map(x=>x.trim());
+        const ad  = p[0]||'-';
+        const mm  = p[1]||'-';
+        const sn  = (p[2]||'').replace('S/N:','').trim()||'-';
+        const srt = (p[3]||'').replace('Sert:','').trim()||'-';
+        return `<tr>
+          <td style="padding:4px 8px;border:1px solid #ccc">${ad}</td>
+          <td style="padding:4px 8px;border:1px solid #ccc">${mm}</td>
+          <td style="padding:4px 8px;border:1px solid #ccc">${sn}</td>
+          <td style="padding:4px 8px;border:1px solid #ccc">-</td>
+          <td style="padding:4px 8px;border:1px solid #ccc">${srt}</td>
+          <td style="padding:4px 8px;border:1px solid #ccc">${akredNo||'-'}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="6" style="padding:4px 8px;border:1px solid #ccc;color:#888">—</td></tr>';
 
-  // Referans cihazlar — satır satır
-  const refRows = refCihazStr ? refCihazStr.split('\n').filter(Boolean).map(r=>{
-    const p = r.split('|').map(x=>x.trim());
-    const ad    = p[0]||'-';
-    const mm    = p[1]||'-';
-    const sn    = (p[2]||'').replace('S/N:','').trim()||'-';
-    const srtNo = (p[3]||'').replace('Sert:','').trim()||'-';
-    const marka = mm.split(' ')[0]||'-';
-    const model = mm.split(' ').slice(1).join(' ')||'-';
-    return `<tr>
-      <td style="padding:4px 8px;border:1px solid #ccc">${ad}</td>
-      <td style="padding:4px 8px;border:1px solid #ccc">${marka} / ${model}</td>
-      <td style="padding:4px 8px;border:1px solid #ccc">${sn}</td>
-      <td style="padding:4px 8px;border:1px solid #ccc">${'-'}</td>
-      <td style="padding:4px 8px;border:1px solid #ccc">${srtNo}</td>
-      <td style="padding:4px 8px;border:1px solid #ccc" class="izlenebilir">AB-0088-K</td>
-    </tr>`;
-  }).join('') : '<tr><td colspan="6" style="padding:4px 8px;border:1px solid #ccc;color:#888">—</td></tr>';
+  const muhurHtml = muhurLogo
+    ? `<img src="${muhurLogo}" style="width:72px;height:72px;object-fit:contain;border-radius:50%;display:block;margin:4px auto">`
+    : `<div style="width:72px;height:72px;border:1pt solid #bbb;border-radius:50%;margin:4px auto"></div>`;
 
-  const logoLeftHtml  = labLogo    ? `<img src="${labLogo}" style="height:80px;max-width:160px;object-fit:contain">` : '';
-  const logoRightHtml = turkakLogo ? `<img src="${turkakLogo}" style="height:80px;max-width:160px;object-fit:contain">` : '';
+  const olcumPdfHtml = s.ekPdfData
+    ? `<div class="page" style="padding:0">
+        <iframe src="data:application/pdf;base64,${s.ekPdfData}"
+          style="width:210mm;height:297mm;border:none;display:block"></iframe>
+      </div>`
+    : '';
 
   const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">
 <title>Kalibrasyon Sertifikası ${sertNo}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Arial,Helvetica,sans-serif;font-size:9pt;color:#111;background:#fff}
-  .page{width:210mm;min-height:297mm;padding:12mm 14mm 10mm 14mm;margin:0 auto;display:flex;flex-direction:column}
-  .page+.page{page-break-before:always}
-  @media print{.no-print{display:none!important}.page{margin:0;padding:12mm 14mm 10mm 14mm}}
-  .no-print-bar{position:fixed;top:0;left:0;right:0;background:#333;color:#fff;padding:7px 16px;display:flex;gap:8px;align-items:center;z-index:999;font-family:Arial,sans-serif;font-size:12px}
-  .no-print-bar button{background:#fff;color:#333;border:none;padding:4px 12px;border-radius:3px;font-weight:700;cursor:pointer;font-size:11px}
-  .header-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
-  .header-center{text-align:center;padding:4px 0 6px 0;border-top:1.5pt solid #000;border-bottom:1.5pt solid #000;margin-bottom:8px}
-  .header-center .title-tr{font-size:14pt;font-weight:700;letter-spacing:.3px}
-  .header-center .title-en{font-size:9pt;color:#444;font-style:italic}
-  .sert-no-box{font-size:9pt;font-weight:700;text-align:right}
-  .info-table{width:100%;border-collapse:collapse;font-size:8.5pt;margin-bottom:2px}
-  .info-table td{padding:3px 6px;vertical-align:top;line-height:1.4}
-  .info-table .lbl{color:#333;width:38%;font-size:7.5pt}
-  .info-table .lbl2{color:#333;font-size:7pt;display:block}
-  .info-table .val{font-weight:600}
-  .border-box{border:1pt solid #000;margin-bottom:8px}
-  .border-box .box-inner{padding:6px 10px}
-  .section-hdr{background:#000;color:#fff;font-size:8pt;font-weight:700;padding:3px 10px;letter-spacing:.3px}
-  .data-table{width:100%;border-collapse:collapse;font-size:8pt}
-  .data-table th{background:#e0e0e0;padding:4px 8px;border:1px solid #ccc;text-align:left;font-size:7.5pt;font-weight:700}
-  .data-table td{padding:4px 8px;border:1px solid #ccc;font-size:8pt}
-  .text-block{font-size:8pt;line-height:1.5;padding:4px 2px}
-  .footer-logos{display:flex;justify-content:space-around;align-items:flex-end;margin-top:auto;padding-top:10px;border-top:1pt solid #ccc}
-  .footer-sig{text-align:center;font-size:8pt}
-  .footer-sig .sig-lbl{font-size:7.5pt;color:#555;margin-bottom:4px}
-  .footer-sig .sig-name{font-weight:700;font-size:9pt}
-  .footer-sig .sig-date{font-size:8pt}
-  .footer-bottom{border-top:1pt solid #ccc;margin-top:8px;padding-top:4px;font-size:7pt;color:#444;display:flex;justify-content:space-between}
-  .page2-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1.5pt solid #000;padding-bottom:6px;margin-bottom:8px}
-  .page2-title{font-size:13pt;font-weight:700;line-height:1.25}
-  .num-badge{font-size:8.5pt;font-weight:700;text-align:right}
-  .kabul-bar{display:flex;justify-content:space-between;font-size:8pt;background:#f5f5f5;padding:4px 10px;border:1pt solid #ccc;margin-bottom:8px}
-  .izlenebilir{font-size:7.5pt}
+  body{font-family:Arial,Helvetica,sans-serif;font-size:9pt;color:#111;background:#f0f0f0}
+  .page{width:210mm;min-height:297mm;padding:12mm 14mm 10mm 14mm;margin:8mm auto;background:#fff;display:flex;flex-direction:column;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+  @media print{
+    body{background:#fff}
+    .no-print{display:none!important}
+    .page{margin:0;padding:12mm 14mm 10mm 14mm;box-shadow:none;page-break-after:always}
+    .page:last-child{page-break-after:avoid}
+  }
+  .no-print-bar{position:fixed;top:0;left:0;right:0;background:#222;color:#fff;padding:7px 16px;display:flex;gap:8px;align-items:center;z-index:999;font-family:Arial;font-size:12px}
+  .no-print-bar button{background:#fff;color:#222;border:none;padding:4px 14px;border-radius:3px;font-weight:700;cursor:pointer}
+  /* Header */
+  .hdr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+  .hdr-center-name{text-align:center;font-size:14pt;font-weight:700;line-height:1.25;margin-bottom:2px}
+  .hdr-center-addr{text-align:center;font-size:8.5pt;color:#333;margin-bottom:5px}
+  .hdr-title-bar{border-top:2pt solid #000;border-bottom:2pt solid #000;text-align:center;padding:4px 0;margin-bottom:6px}
+  .hdr-title-bar .tr{font-size:13pt;font-weight:700;letter-spacing:.3px}
+  .hdr-title-bar .en{font-size:8.5pt;font-style:italic;color:#444}
+  .sert-row{display:flex;justify-content:space-between;font-size:8.5pt;font-weight:700;margin-bottom:8px}
+  /* Info tablo — tek sütun */
+  .info-tbl{width:100%;border-collapse:collapse;font-size:8.5pt;margin-bottom:8px;border:1pt solid #000}
+  .info-tbl tr{border-bottom:0.5pt solid #ccc}
+  .info-tbl tr:last-child{border-bottom:none}
+  .info-tbl td{padding:3.5px 8px;vertical-align:top;line-height:1.4}
+  .info-tbl .lbl{width:34%;color:#333}
+  .info-tbl .lbl small{display:block;font-size:7pt;color:#777;font-style:italic}
+  .info-tbl .val{font-weight:600}
+  .info-tbl .sep{width:10px;color:#555}
+  /* Akreditasyon text */
+  .akred-text{font-size:7.8pt;line-height:1.5;color:#222;margin-bottom:8px}
+  .akred-text p{margin-bottom:3px}
+  /* İmza */
+  .sig-row{display:flex;justify-content:space-around;align-items:flex-end;margin-top:auto;padding-top:10px;border-top:1pt solid #bbb}
+  .sig-box{text-align:center;font-size:8pt}
+  .sig-box .lbl{font-size:7.5pt;color:#555;margin-bottom:4px;font-style:italic}
+  .sig-box .name{font-weight:700;font-size:8.5pt;margin-top:4px}
+  .sig-box .date{font-size:8pt;color:#333}
+  /* Footer */
+  .pg-footer{border-top:1pt solid #bbb;margin-top:6px;padding-top:4px;font-size:7pt;color:#555;display:flex;justify-content:space-between}
+  .pg-num{text-align:center;font-size:7pt;color:#888;margin-top:3px}
+  /* Sayfa 2 */
+  .p2hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2pt solid #000;padding-bottom:6px;margin-bottom:8px}
+  .p2hdr-title{font-size:12pt;font-weight:700;line-height:1.3}
+  .p2hdr-no{font-size:8.5pt;font-weight:700;text-align:right}
+  .kabul-bar{display:flex;justify-content:space-between;background:#f3f3f3;border:1pt solid #ccc;padding:4px 10px;font-size:8pt;margin-bottom:8px}
+  .sec-hdr{background:#000;color:#fff;font-size:8pt;font-weight:700;padding:3px 10px;letter-spacing:.2px}
+  .sec-body{border:1pt solid #000;border-top:none;padding:5px 10px;font-size:8.5pt;line-height:1.5}
+  .sec-body-italic{font-size:7.5pt;color:#555;font-style:italic;margin-top:3px}
+  .dtbl{width:100%;border-collapse:collapse;font-size:8pt}
+  .dtbl th{background:#e0e0e0;padding:4px 8px;border:1px solid #bbb;font-size:7.5pt;font-weight:700;text-align:left}
+  .dtbl td{padding:4px 8px;border:1px solid #bbb}
 </style>
 </head><body>
 
 <div class="no-print no-print-bar">
-  <span style="font-weight:700">📄 Kalibrasyon Sertifikası Önizleme — ${sertNo}</span>
+  <span style="font-weight:700">📄 Kalibrasyon Sertifikası — ${sertNo}</span>
   <button onclick="window.print()">🖨️ Yazdır / PDF Kaydet</button>
-  <button onclick="window.close()" style="background:#ccc">✕ Kapat</button>
+  <button onclick="window.close()" style="background:#ddd;color:#333">✕ Kapat</button>
 </div>
-<div style="height:38px" class="no-print"></div>
+<div style="height:42px" class="no-print"></div>
 
-<!-- ═══════════ SAYFA 1 ═══════════ -->
+<!-- ══════════════ SAYFA 1 ══════════════ -->
 <div class="page">
 
-  <!-- Üst: Sol logo | Merkez başlık | Sağ Türkak logo -->
-  <div class="header-top">
-    <div style="min-width:130px">${logoLeftHtml}</div>
-    <div style="flex:1;text-align:center;padding:0 10px">
-      <div style="font-size:13pt;font-weight:700;line-height:1.2">${labAd}</div>
-      <div style="font-size:8pt;color:#444;margin-top:2px">${labAdres}</div>
-    </div>
-    <div style="min-width:130px;text-align:right">${logoRightHtml}</div>
+  <!-- Üst: Logo sol | Boş | Türkak logo sağ -->
+  <div class="hdr-top">
+    <div style="width:140px;min-height:10px">${labLogo ? `<img src="${labLogo}" style="max-height:80px;max-width:140px;object-fit:contain">` : ''}</div>
+    <div style="flex:1"></div>
+    <div style="width:140px;min-height:10px;text-align:right">${turkakLogo ? `<img src="${turkakLogo}" style="max-height:80px;max-width:140px;object-fit:contain">` : ''}</div>
   </div>
+
+  <!-- Lab adı ve adres — ortalı -->
+  <div class="hdr-center-name">${labAd}</div>
+  <div class="hdr-center-addr">${labAdres}</div>
 
   <!-- KALİBRASYON SERTİFİKASI başlığı -->
-  <div class="header-center" style="margin-top:6px">
-    <div class="title-tr">KALİBRASYON SERTİFİKASI</div>
-    <div class="title-en">Calibration Certificate</div>
+  <div class="hdr-title-bar">
+    <div class="tr">KALİBRASYON SERTİFİKASI</div>
+    <div class="en">Calibration Certificate</div>
   </div>
 
-  <!-- Sertifika No + Akred No -->
-  <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-    <div style="font-size:8.5pt;font-weight:700">${sertNo}</div>
-    <div style="font-size:8.5pt;font-weight:700">${akredNo}</div>
+  <!-- Sertifika No | Akred No -->
+  <div class="sert-row">
+    <span>${sertNo}</span>
+    <span>${akredNo}</span>
   </div>
 
-  <!-- Ana bilgiler tablosu -->
-  <div class="border-box">
-    <div class="box-inner">
-      <table class="info-table">
-        <tr>
-          <td class="lbl">Cihazın Sahibi<span class="lbl2">Customer</span></td>
-          <td>:</td>
-          <td class="val">${firma?.ad||'-'}</td>
-          <td class="lbl" style="padding-left:16px">İstek Numarası<span class="lbl2">Order No</span></td>
-          <td>:</td>
-          <td class="val">${fis?.fisNo||('#'+s.fisId)}</td>
-        </tr>
-        <tr>
-          <td class="lbl">Adres<span class="lbl2">Address</span></td>
-          <td>:</td>
-          <td class="val" colspan="4">${firma?.adres||firma?.il||'-'}</td>
-        </tr>
-        <tr>
-          <td class="lbl">Makine / Cihaz<span class="lbl2">Instrument / Device</span></td>
-          <td>:</td>
-          <td class="val">${mc?.ad||'-'}</td>
-          <td class="lbl" style="padding-left:16px">Kalibrasyon Tarihi<span class="lbl2">Date of Calibration</span></td>
-          <td>:</td>
-          <td class="val">${fmtTarih(kal?.tarih)}</td>
-        </tr>
-        <tr>
-          <td class="lbl">İmalatçı<span class="lbl2">Manufacturer</span></td>
-          <td>:</td>
-          <td class="val">${mc?.marka||'-'}</td>
-          <td class="lbl" style="padding-left:16px">Sertifikanın Sayfa Sayısı<span class="lbl2">Number of Pages of the Certificate</span></td>
-          <td>:</td>
-          <td class="val">${toplamSayfa}</td>
-        </tr>
-        <tr>
-          <td class="lbl">Tip<span class="lbl2">Type</span></td>
-          <td>:</td>
-          <td class="val">${mc?.model||'-'}</td>
-          <td class="lbl" style="padding-left:16px">Demirbaş Numarası<span class="lbl2">Device ID Number</span></td>
-          <td>:</td>
-          <td class="val">${mc?.envNo||'-'}</td>
-        </tr>
-        <tr>
-          <td class="lbl">Seri Numarası<span class="lbl2">Serial Number</span></td>
-          <td>:</td>
-          <td class="val" colspan="4">${mc?.seriNo||'-'}</td>
-        </tr>
-      </table>
+  <!-- Bilgiler tablosu — TEK SÜTUN, alt alta -->
+  <table class="info-tbl">
+    <tr>
+      <td class="lbl">Cihazın Sahibi<small>Customer</small></td>
+      <td class="sep">:</td>
+      <td class="val">${firma?.ad||'-'}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Adres<small>Address</small></td>
+      <td class="sep">:</td>
+      <td class="val">${firma?.adres||firma?.il||'-'}</td>
+    </tr>
+    <tr>
+      <td class="lbl">İstek Numarası<small>Order No</small></td>
+      <td class="sep">:</td>
+      <td class="val">${fis?.fisNo||('#'+s.fisId)}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Makine / Cihaz<small>Instrument / Device</small></td>
+      <td class="sep">:</td>
+      <td class="val">${mc?.ad||'-'}</td>
+    </tr>
+    <tr>
+      <td class="lbl">İmalatçı<small>Manufacturer</small></td>
+      <td class="sep">:</td>
+      <td class="val">${mc?.marka||'-'}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Tip<small>Type</small></td>
+      <td class="sep">:</td>
+      <td class="val">${mc?.model||'-'}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Seri Numarası<small>Serial Number</small></td>
+      <td class="sep">:</td>
+      <td class="val">${mc?.seriNo||'-'}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Kalibrasyon Tarihi<small>Date of Calibration</small></td>
+      <td class="sep">:</td>
+      <td class="val">${fmtTarih(kal?.tarih)}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Sertifikanın Sayfa Sayısı<small>Number of Pages of the Certificate</small></td>
+      <td class="sep">:</td>
+      <td class="val">${toplamSayfa}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Demirbaş Numarası<small>Device ID Number</small></td>
+      <td class="sep">:</td>
+      <td class="val">${mc?.envNo||'-'}</td>
+    </tr>
+  </table>
+
+  <!-- Akreditasyon metinleri -->
+  <div class="akred-text">
+    <p>Bu kalibrasyon sertifikası, Uluslararası Birimler Sisteminde (SI) tanımlanmış birimlerin ulusal ölçüm standartlarına izlenebilirliğini belgelemektedir.</p>
+    <p><em>This calibration documents the traceability to national standards, which realize the unit of measurement according to the International System of Units (SI).</em></p>
+    <p>${labAd} kalibrasyon laboratuvarı olarak faaliyet gösteren laboratuvarımız, Türk Akreditasyon Kurumu (TÜRKAK) tarafından TS EN ISO/IEC 17025:2017 standardına göre akredite edilmiştir. Akreditasyon dosya numarası: <strong>${akredNo}</strong></p>
+  </div>
+
+  <!-- İmza alanları -->
+  <div class="sig-row">
+    <div class="sig-box">
+      <div class="lbl">Mühür / <em>Seal</em></div>
+      ${muhurHtml}
+    </div>
+    <div class="sig-box">
+      <div class="lbl">Yayımlandığı Tarih / <em>Date</em></div>
+      <div class="name">${fmtTarih(yayimTarih)}</div>
+    </div>
+    <div class="sig-box">
+      <div class="lbl">Kalibrasyonu Yapan / <em>Calibrated by</em></div>
+      <div style="font-size:7pt;color:#999;font-style:italic;margin:6px 0 2px">e-imzalıdır</div>
+      <div class="name">${yapan||'-'}</div>
+      <div class="date">${fmtTarih(kal?.tarih)}</div>
+    </div>
+    <div class="sig-box">
+      <div class="lbl">Onaylayan / Tarih / <em>Approval / Date</em></div>
+      <div style="font-size:7pt;color:#999;font-style:italic;margin:6px 0 2px">e-imzalıdır</div>
+      <div class="name">${onaylayan||'-'}</div>
+      <div class="date">${fmtTarih(yayimTarih)}</div>
     </div>
   </div>
 
-  <!-- Akreditasyon açıklama metinleri -->
-  <div class="text-block" style="margin-bottom:6px">
-    <p style="margin-bottom:4px">Bu kalibrasyon sertifikası, Uluslararası Birimler Sisteminde (SI) tanımlanmış birimlerin ulusal ölçüm standartlarına izlenebilirliğini belgelemektedir.</p>
-    <p style="margin-bottom:4px"><em>This calibration documents the traceability to national standards, which realize the unit of measurement according to the International System of Units (SI).</em></p>
-    <p style="margin-bottom:4px">${labAd} kalibrasyon laboratuvarı olarak faaliyet gösteren laboratuvarımız, Türk Akreditasyon Kurumu (TÜRKAK) tarafından TS EN ISO/IEC 17025:2017 standardına göre akredite edilmiştir.</p>
-  </div>
-
-  <!-- Alt: İmza alanları -->
-  <div class="footer-logos">
-    <div class="footer-sig">
-      <div class="sig-lbl">Mühür<br><em>Seal</em></div>
-      <div style="width:70px;height:55px;border:1pt solid #ccc;border-radius:50%;margin:4px auto"></div>
-    </div>
-    <div class="footer-sig">
-      <div class="sig-lbl">Yayımlandığı Tarih<br><em>Date</em></div>
-      <div class="sig-name" style="font-size:8pt;margin-top:20px">${fmtTarih(yayimTarih)}</div>
-    </div>
-    <div class="footer-sig">
-      <div class="sig-lbl">Kalibrasyonu Yapan<br><em>Calibrated by</em></div>
-      <div style="font-size:7pt;color:#888;font-style:italic;margin-top:8px">e-imzalıdır</div>
-      <div class="sig-name">${yapan||'-'}</div>
-      <div class="sig-date">${fmtTarih(kal?.tarih)}</div>
-    </div>
-    <div class="footer-sig">
-      <div class="sig-lbl">Onaylayan / Tarih<br><em>Approval / Date</em></div>
-      <div style="font-size:7pt;color:#888;font-style:italic;margin-top:8px">e-imzalıdır</div>
-      <div class="sig-name">${onaylayan||'-'}</div>
-      <div class="sig-date">${fmtTarih(yayimTarih)}</div>
-    </div>
-  </div>
-
-  <!-- Alt bilgi çizgisi -->
-  <div class="footer-bottom">
-    <span>${labAd} &nbsp;|&nbsp; Tel: ${labTel} &nbsp;|&nbsp; ${labAdres}</span>
+  <div class="pg-footer">
+    <span>${labAd} | Tel: ${labTel} | ${labAdres}</span>
     <span>e-mail: ${labMail}</span>
   </div>
-  <div style="text-align:center;font-size:7pt;color:#888;margin-top:3px">Sayfa 1 / ${toplamSayfa}</div>
+  <div class="pg-num">Sayfa 1 / ${toplamSayfa}</div>
+</div>
 
-</div><!-- /sayfa1 -->
-
-<!-- ═══════════ SAYFA 2 ═══════════ -->
+<!-- ══════════════ SAYFA 2 ══════════════ -->
 <div class="page">
 
-  <!-- Sayfa 2 header -->
-  <div class="page2-header">
-    <div class="page2-title">
-      <div>${labAd}</div>
-      <div style="font-size:9pt;font-weight:400;color:#444">KALİBRASYON VE DANIŞMANLIK</div>
-    </div>
-    <div class="num-badge">${akredNo}<br>${sertNo}</div>
+  <div class="p2hdr">
+    <div class="p2hdr-title">${labAd}</div>
+    <div class="p2hdr-no">${akredNo}<br>${sertNo}</div>
   </div>
 
-  <!-- Kabul ve Gelecek tarih -->
   <div class="kabul-bar">
-    <span><strong>Cihazın Kalibrasyona Kabul Tarihi :</strong> ${fmtTarih(fis?.tarih)}</span>
-    <span><strong>Gelecek Kalibrasyon Tarihi :</strong> ${fmtTarih(kal?.sonrakiTarih)||'—'}</span>
+    <span><b>Cihazın Kalibrasyona Kabul Tarihi :</b> ${fmtTarih(fis?.tarih)}</span>
+    <span><b>Gelecek Kalibrasyon Tarihi :</b> ${fmtTarih(kal?.sonrakiTarih)||'—'}</span>
   </div>
 
-  <!-- 1. Kalibrasyon yapılan cihaz bilgileri -->
+  <!-- 1 -->
   <div style="margin-bottom:6px">
-    <div class="section-hdr">1. KALİBRASYON YAPILAN CİHAZ BİLGİLERİ / CALIBRATED DEVICE INFORMATION</div>
+    <div class="sec-hdr">1. KALİBRASYON YAPILAN CİHAZ BİLGİLERİ / CALIBRATED DEVICE INFORMATION</div>
     <div style="border:1pt solid #000;border-top:none">
-      <table class="info-table" style="padding:4px">
+      <table class="dtbl">
         <tr>
-          <td class="lbl" style="width:22%">Makine/Cihaz<span class="lbl2">Instrument / Device</span></td>
-          <td style="width:28%" class="val">${mc?.ad||'-'}</td>
-          <td class="lbl" style="width:22%">Seri Numarası<span class="lbl2">Serial Number</span></td>
-          <td class="val">${mc?.seriNo||'-'}</td>
+          <td style="width:22%;color:#444;padding:4px 8px;border:1px solid #bbb">Makine/Cihaz<br><small style="color:#777;font-style:italic">Instrument / Device</small></td>
+          <td style="width:28%;font-weight:600;border:1px solid #bbb;padding:4px 8px">${mc?.ad||'-'}</td>
+          <td style="width:22%;color:#444;padding:4px 8px;border:1px solid #bbb">Seri Numarası<br><small style="color:#777;font-style:italic">Serial Number</small></td>
+          <td style="font-weight:600;border:1px solid #bbb;padding:4px 8px">${mc?.seriNo||'-'}</td>
         </tr>
         <tr>
-          <td class="lbl">İmalatçı<span class="lbl2">Manufacturer</span></td>
-          <td class="val">${mc?.marka||'-'}</td>
-          <td class="lbl">Ölçüm Aralığı<span class="lbl2">Measurement Range</span></td>
-          <td class="val">${mc?.olcumAraligi||'-'}</td>
+          <td style="color:#444;padding:4px 8px;border:1px solid #bbb">İmalatçı<br><small style="color:#777;font-style:italic">Manufacturer</small></td>
+          <td style="font-weight:600;border:1px solid #bbb;padding:4px 8px">${mc?.marka||'-'}</td>
+          <td style="color:#444;padding:4px 8px;border:1px solid #bbb">Ölçüm Aralığı<br><small style="color:#777;font-style:italic">Measurement Range</small></td>
+          <td style="font-weight:600;border:1px solid #bbb;padding:4px 8px">${mc?.olcumAraligi||'-'}</td>
         </tr>
         <tr>
-          <td class="lbl">Tip<span class="lbl2">Type</span></td>
-          <td class="val">${mc?.model||'-'}</td>
-          <td class="lbl">Kalibrasyon Yapıldığı Yer<span class="lbl2">Calibration Location</span></td>
-          <td class="val">${mc?.kalYer||labAdres||'-'}</td>
+          <td style="color:#444;padding:4px 8px;border:1px solid #bbb">Tip<br><small style="color:#777;font-style:italic">Type</small></td>
+          <td style="font-weight:600;border:1px solid #bbb;padding:4px 8px">${mc?.model||'-'}</td>
+          <td style="color:#444;padding:4px 8px;border:1px solid #bbb">Kalibrasyon Yapıldığı Yer<br><small style="color:#777;font-style:italic">Calibration Location</small></td>
+          <td style="font-weight:600;border:1px solid #bbb;padding:4px 8px">${mc?.kalYer||labAdres||'-'}</td>
         </tr>
       </table>
     </div>
   </div>
 
-  <!-- 2. Ortam Şartları -->
+  <!-- 2 -->
   <div style="margin-bottom:6px">
-    <div class="section-hdr">2. ORTAM ŞARTLARI / ENVIRONMENT CONDITIONS</div>
-    <div style="border:1pt solid #000;border-top:none;padding:5px 10px;font-size:8.5pt">
-      Elektrik (23±C) °C , Nam : (${sicaklik||'-'}) &nbsp;&nbsp; Nem : (${nem||'-'}) S/h
+    <div class="sec-hdr">2. ORTAM ŞARTLARI / ENVIRONMENT CONDITIONS</div>
+    <div class="sec-body">Elektrik (23±3) °C , Nam : (${sicaklik||'-'}) &nbsp;&nbsp; Nem : (${nem||'-'}) S/h</div>
+  </div>
+
+  <!-- 3 -->
+  <div style="margin-bottom:6px">
+    <div class="sec-hdr">3. ÖLÇÜM ŞARTLARI / MEASUREMENT CONDITIONS</div>
+    <div class="sec-body">
+      Cihaz, kalibrasyon öncesi laboratuvarda bekletilerek ortam şartlarına uyum sağladıktan ve kalibrasyon için gerekli şartlar oluşturulduktan sonra ölçümler gerçekleştirilmiştir.
+      <div class="sec-body-italic">Measurements have been carried out after the instruments were maintained in the suitable area and the environmental conditions as appropriate to the calibration activities in the laboratory.</div>
     </div>
   </div>
 
-  <!-- 3. Ölçüm Şartları -->
+  <!-- 4 -->
   <div style="margin-bottom:6px">
-    <div class="section-hdr">3. ÖLÇÜM ŞARTLARI / MEASUREMENT CONDITIONS</div>
-    <div style="border:1pt solid #000;border-top:none;padding:5px 10px">
-      <div style="font-size:8.5pt;margin-bottom:3px">Cihaz, kalibrasyon öncesi laboratuvarda bekletilerek ortam şartlarına uyum sağladıktan ve kalibrasyon için gerekli şartlar oluşturulduktan sonra ölçümler gerçekleştirilmiştir.</div>
-      <div style="font-size:7.5pt;color:#444;font-style:italic">Measurements have been carried out after the instruments were maintained in the suitable area and the environmental conditions as appropriate to the calibration activities in the laboratory.</div>
+    <div class="sec-hdr">4. ÖLÇÜM BELİRSİZLİĞİ / MEASUREMENT UNCERTAINTY</div>
+    <div class="sec-body">
+      Beyan edilen genişletilmiş ölçüm belirsizliği, standart ölçüm belirsizliğinin normal dağılım için yaklaşık %95 güvenilirlik seviyesini sağlayan k=2 kapsam faktörü ile çarpımının sonucudur. Standart belirsizlik GUM ve EA-4/02 dokümanlarına uygun olarak belirlenmiştir.
+      <div class="sec-body-italic">The reported expanded uncertainty of measurement is stated as the standard uncertainty multiplied by the coverage factor k=2, which for a normal distribution corresponds to a coverage probability of approximately 95%. The standard uncertainty is calculated according to GUM and EA-4/02 documents.</div>
     </div>
   </div>
 
-  <!-- 4. Ölçüm Belirsizliği -->
+  <!-- 5 -->
   <div style="margin-bottom:6px">
-    <div class="section-hdr">4. ÖLÇÜM BELİRSİZLİĞİ / MEASUREMENT UNCERTAINTY</div>
-    <div style="border:1pt solid #000;border-top:none;padding:5px 10px">
-      <div style="font-size:8.5pt;margin-bottom:3px">Beyan edilen genişletilmiş ölçüm belirsizliği, standart ölçüm belirsizliğinin normal dağılım için yaklaşık %95 güvenilirlik seviyesini sağlayan k=2 kapsam faktörü ile çarpımının sonucudur. Standart belirsizlik GUM ve EA-4/02 dokümanlarına uygun olarak belirlenmiştir.</div>
-      <div style="font-size:7.5pt;color:#444;font-style:italic">The reported expanded uncertainty of measurement is stated as the standard uncertainty multiplied by the coverage factor k=2, which for a normal distribution corresponds to a coverage probability of approximately 95%. The standard uncertainty is calculated according to GUM and EA-4/02 documents.</div>
-    </div>
-  </div>
-
-  <!-- 5. Kalibrasyon Prosedürleri -->
-  <div style="margin-bottom:6px">
-    <div class="section-hdr">5. KALİBRASYON PROSEDÜRLERİ / CALIBRATION PROCEDURES</div>
+    <div class="sec-hdr">5. KALİBRASYON PROSEDÜRLERİ / CALIBRATION PROCEDURES</div>
     <div style="border:1pt solid #000;border-top:none">
-      <table class="data-table">
-        <thead><tr><th>Prosedür No / Procedure Number</th><th>Prosedür Adı / Procedure Name</th></tr></thead>
-        <tbody>${prosedurRows}</tbody>
-      </table>
+      <table class="dtbl"><thead><tr><th>Prosedür No / Procedure Number</th><th>Prosedür Adı / Procedure Name</th></tr></thead>
+      <tbody>${prosedurRows}</tbody></table>
     </div>
   </div>
 
-  <!-- 6. Kalibrasyonda Kullanılan Referanslar -->
+  <!-- 6 -->
   <div style="margin-bottom:6px">
-    <div class="section-hdr">6. KALIBRASYONDA KULLANILAN REFERANSLAR / REFERENCES USED IN CALIBRATION</div>
+    <div class="sec-hdr">6. KALIBRASYONDA KULLANILAN REFERANSLAR / REFERENCES USED IN CALIBRATION</div>
     <div style="border:1pt solid #000;border-top:none">
-      <table class="data-table">
-        <thead><tr><th>Demirbaş No</th><th>Cihaz Tanımı / Marka / Model</th><th>Seri No</th><th>Gelecek Kal. Tarihi</th><th>Sertifika No</th><th>İzlenebilir</th></tr></thead>
-        <tbody>${refRows}</tbody>
-      </table>
+      <table class="dtbl"><thead><tr><th>Demirbaş No</th><th>Cihaz Tanımı / Marka / Model</th><th>Seri No</th><th>Gel. Kal. Tarihi</th><th>Sertifika No</th><th>İzlenebilir</th></tr></thead>
+      <tbody>${refRows}</tbody></table>
     </div>
   </div>
 
-  <!-- 7. Açıklamalar -->
+  <!-- 7 -->
   <div style="margin-bottom:6px">
-    <div class="section-hdr">7. AÇIKLAMALAR / REMARKS</div>
-    <div style="border:1pt solid #000;border-top:none;padding:5px 10px;font-size:8.5pt;min-height:28px">
+    <div class="sec-hdr">7. AÇIKLAMALAR / REMARKS</div>
+    <div class="sec-body" style="min-height:26px">
       ${aciklama||'Kalibrasyon sonuçları, kalibrasyon tarihinden itibaren ve sertifikada belirtilmiş olan şartlar altında geçerlidir.'}
       <div style="margin-top:4px;font-weight:700">Bu Kalibrasyon Sertifikası, TS EN ISO/IEC 17025 standardında belirtilen yükümlülükler çerçevesinde tanzim edilmiştir.</div>
     </div>
   </div>
 
-  <!-- 8. Uygunluk Değerlendirme -->
+  <!-- 8 -->
   <div style="margin-bottom:6px">
-    <div class="section-hdr">8. UYGUNLUK DEĞERLENDİRME VE KARAR KURALI / CONFORMITY ASSESSMENT AND DECISION RULE</div>
-    <div style="border:1pt solid #000;border-top:none;padding:5px 10px;font-size:8.5pt;min-height:20px">
-      Ölçüm sonuçları raporda belirtilmiş olup, değerlendirme kullanıcıya bırakılmıştır.
-    </div>
+    <div class="sec-hdr">8. UYGUNLUK DEĞERLENDİRME VE KARAR KURALI / CONFORMITY ASSESSMENT AND DECISION RULE</div>
+    <div class="sec-body" style="min-height:20px">Ölçüm sonuçları raporda belirtilmiş olup, değerlendirme kullanıcıya bırakılmıştır.</div>
   </div>
 
-  <!-- 9. Görüş ve Yorumlar -->
+  <!-- 9 -->
   <div style="margin-bottom:6px">
-    <div class="section-hdr">9. GÖRÜŞ VE YORUMLAR / OPINION AND COMMENTS</div>
-    <div style="border:1pt solid #000;border-top:none;padding:5px 10px;font-size:8.5pt;min-height:24px">
-      ${gorus||'—'}
-    </div>
+    <div class="sec-hdr">9. GÖRÜŞ VE YORUMLAR / OPINION AND COMMENTS</div>
+    <div class="sec-body" style="min-height:22px">${gorus||'—'}</div>
   </div>
 
-  <!-- Alt bilgi -->
   <div style="margin-top:auto">
-    <div style="font-size:7pt;color:#444;text-align:center;border-top:1pt solid #ccc;padding-top:4px;margin-bottom:3px">
+    <div style="font-size:7pt;color:#444;text-align:center;border-top:1pt solid #bbb;padding-top:4px;margin-bottom:4px">
       Bu sertifika dijital imzalıdır. Laboratuvarın yazılı izni alınmadan kısmen kopyalanıp çoğaltılamaz. İmzasız ve mühürsüz sertifikalar geçerli değildir.
     </div>
-    <div class="footer-bottom">
-      <span>${labAd} &nbsp;|&nbsp; Tel: ${labTel} &nbsp;|&nbsp; ${labAdres}</span>
+    <div class="pg-footer">
+      <span>${labAd} | Tel: ${labTel} | ${labAdres}</span>
       <span>e-mail: ${labMail}</span>
     </div>
-    <div style="text-align:center;font-size:7pt;color:#888;margin-top:3px">Sayfa 2 / ${toplamSayfa}</div>
+    <div class="pg-num">Sayfa 2 / ${toplamSayfa}</div>
   </div>
+</div>
 
-</div><!-- /sayfa2 -->
+${olcumPdfHtml}
 
 </body></html>`;
 
