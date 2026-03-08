@@ -1018,10 +1018,7 @@ th.sort-desc::after { content:' ↓'; opacity:1; color:var(--accent2); }
   <div class="modal modal-lg">
     <div class="modal-header">
       <span class="modal-title">Müşteri Cihazı Kayıt</span>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn btn-secondary btn-sm" id="btnPaste" onclick="pasteCihaz()" title="Son kopyalanan veriyi yapıştır">📋 Yapıştır</button>
-        <div class="modal-close" onclick="closeModal('musteriCihazModal')">✕</div>
-      </div>
+      <div class="modal-close" onclick="closeModal('musteriCihazModal')">✕</div>
     </div>
     <div class="modal-body">
       <div class="form-row">
@@ -1074,10 +1071,12 @@ th.sort-desc::after { content:' ↓'; opacity:1; color:var(--accent2); }
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('musteriCihazModal')">İptal</button>
+      <button class="btn btn-secondary" id="btnPaste" onclick="pasteCihaz()">📋 Yapıştır</button>
       <button class="btn btn-secondary" id="btnSeriEkle" onclick="saveMusteriCihazSeri()">🔄 Kaydet & Yeni</button>
-      <button class="btn btn-primary" onclick="saveMusteriCihaz()" id="btnCihazKopya">
+      <button class="btn btn-secondary" onclick="saveMusteriCihaz()" id="btnCihazKopya">
         💾 Kaydet <span style="font-size:10px;opacity:.7">(Kopyala)</span>
       </button>
+      <button class="btn btn-primary" onclick="saveMusteriCihaz()">💾 Kaydet</button>
     </div>
   </div>
 </div>
@@ -1632,16 +1631,10 @@ function doLogout() {
   document.getElementById('loginScreen').style.display = 'flex';
 }
 
-// Sayfa yüklenince session kontrol et
-(async function initApp() {
-  const saved = sessionStorage.getItem('labqcert_user');
-  if (saved) {
-    const user = JSON.parse(saved);
-    await dbLoadState();
-    state.user = user;
-    showApp(user);
-    navigate(state.currentPage || 'dashboard');
-  }
+// Sayfa yüklenince login ekranını göster
+(function initApp() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
 })();
 
 
