@@ -4315,7 +4315,10 @@ function renderSertifikalar(c) {
     return true;
   }
 
-  const filtered = state.sertifikalar.filter(sertMatch);
+  const aktifAsama = state._sertAsamaFilter || null;
+  const filtered = state.sertifikalar.filter(s =>
+    sertMatch(s) && (!aktifAsama || getCKCihazDurum(s) === aktifAsama)
+  );
   const toplam   = state.sertifikalar.length;
   const toplamGrup = gruplar.map(g=>({g,count:state.sertifikalar.filter(s=>getCKCihazDurum(s)===g.ckDurum).length}));
 
@@ -4334,15 +4337,24 @@ function renderSertifikalar(c) {
 
     </div>`;
 
-  // ── Stepper Bar
-  html += `
-    <div style="display:flex;gap:0;margin-bottom:20px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
-      ${toplamGrup.map(({g,count},i)=>`
-        <div style="flex:1;padding:12px 8px;text-align:center;border-right:${i<4?'1px solid var(--border)':'none'};background:${count>0?'rgba(0,212,170,.06)':''}">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">${g.label}</div>
-          <div style="font-size:22px;font-weight:700;color:${count>0?'var(--accent)':'var(--text3)'}">${count}</div>
-        </div>`).join('')}
-    </div>`;
+  // ── Stepper Bar — tıklanabilir
+  html += '<div style="display:flex;gap:0;margin-bottom:20px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">';
+  toplamGrup.forEach(({g,count},i) => {
+    const isAktif = aktifAsama === g.ckDurum;
+    const bg   = isAktif ? 'var(--accent)' : count>0 ? 'rgba(0,212,170,.06)' : '';
+    const clr  = isAktif ? '#fff' : count>0 ? 'var(--accent)' : 'var(--text3)';
+    const lclr = isAktif ? 'rgba(255,255,255,.8)' : 'var(--text3)';
+    const br   = i<4 ? '1px solid var(--border)' : 'none';
+    html += '<div onclick="setSertAsama(\'' + g.ckDurum + '\')" style="flex:1;padding:12px 8px;text-align:center;border-right:' + br + ';background:' + bg + ';cursor:pointer;transition:background .15s">'
+          + '<div style="font-size:10px;color:' + lclr + ';margin-bottom:3px">' + g.label + '</div>'
+          + '<div style="font-size:22px;font-weight:700;color:' + clr + '">' + count + '</div>'
+          + '</div>';
+  });
+  const tümBg  = !aktifAsama ? 'var(--accent)' : '';
+  const tümClr = !aktifAsama ? '#fff' : 'var(--text3)';
+  html += '<div onclick="setSertAsama(null)" style="padding:12px 16px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-left:1px solid var(--border);background:' + tümBg + '">'
+        + '<span style="font-size:11px;font-weight:600;color:' + tümClr + ';white-space:nowrap">Tümü</span></div>';
+  html += '</div>';
 
   // ── Filtre (Stepper ile Gruplar arasında)
   html += `
@@ -5163,6 +5175,11 @@ function grupImzala(mevcutDurum) {
   });
 }
 
+function setSertAsama(ckDurum) {
+  state._sertAsamaFilter = ckDurum;
+  renderSertListeOnly();
+}
+
 function clearSertFiltre() {
   const s=document.getElementById('sertSearch');
   const b=document.getElementById('sertTarihBas');
@@ -5218,7 +5235,14 @@ function renderSertListeOnly() {
     if(tarihBit && s.olusturmaTarih > tarihBit) return false;
     return true;
   }
-  const filtered = state.sertifikalar.filter(sertMatch);
+  const filtered = state.sertifikalar.filter(s => {
+    const aktif = state._sertAsamaFilter || null;
+    if(aktif) {
+      const map={taslak:'bekliyor',hazirlaniyor:'tamamlandi',imzalandi:'imzalandi',onaylandi:'onaylandi',gonderildi:'sertifika_gonderildi'};
+      if((map[s.durum]||'bekliyor') !== aktif) return false;
+    }
+    return sertMatch(s);
+  });
   const listEl   = document.getElementById('sertGrupListesi');
   if(!listEl) return;
   if(filtered.length===0) {
