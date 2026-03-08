@@ -4785,8 +4785,16 @@ function onizleDosyaState(i, tip, id){
   const f = dosyalar[i];
   if(!f?.data){showToast('Dosya verisi yok, sayfayı yenileyip tekrar yükleyin','warning');return;}
   const mime = f.type||'application/octet-stream';
-  const url = `data:${mime};base64,${f.data}`;
-  window.open(url,'_blank');
+  try {
+    const byteStr = atob(f.data);
+    const arr = new Uint8Array(byteStr.length);
+    for(let j=0; j<byteStr.length; j++) arr[j] = byteStr.charCodeAt(j);
+    const blob = new Blob([arr], {type: mime});
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
+  } catch(e) {
+    showToast('Dosya açılamadı: ' + e.message, 'error');
+  }
 }
 
 function silDosyaState(i, tip, id){
