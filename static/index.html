@@ -4538,24 +4538,24 @@ function sertOnizle() {
 
       function makePageWrapper(pageNum, totalPages, canvas) {
         const wrapper = document.createElement('div');
-        wrapper.style.cssText = 'width:210mm;margin:0 auto 8mm auto;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;flex-direction:column';
+        wrapper.style.cssText = 'width:210mm;height:297mm;margin:0 auto 8mm auto;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;flex-direction:column;overflow:hidden';
 
         // Header
         const hdr = document.createElement('div');
-        hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 14mm 4px 14mm;border-bottom:1.5pt solid #000;font-family:Arial,sans-serif';
+        hdr.style.cssText = 'flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:5px 14mm 4px 14mm;border-bottom:1.5pt solid #000;font-family:Arial,sans-serif';
         hdr.innerHTML = \`
           <div style="font-size:9pt;font-weight:700;flex:1;text-align:center">\${LAB_AD}</div>
           <div style="font-size:8.5pt;font-weight:700;white-space:nowrap;margin-left:10px">\${AKRED_NO}<br><span style="color:#555;font-size:7.5pt">\${SERT_NO}</span></div>
         \`;
         wrapper.appendChild(hdr);
 
-        // Canvas
-        canvas.style.cssText = 'width:100%;display:block';
+        // Canvas — kalan alanı doldur
+        canvas.style.cssText = 'width:100%;flex:1;display:block;min-height:0;object-fit:contain';
         wrapper.appendChild(canvas);
 
         // Footer
         const ftr = document.createElement('div');
-        ftr.style.cssText = 'padding:4px 14mm 5px 14mm;border-top:1pt solid #ccc;font-family:Arial,sans-serif;font-size:6.5pt;color:#444;line-height:1.4;display:flex;justify-content:space-between;align-items:flex-end';
+        ftr.style.cssText = 'flex-shrink:0;padding:3px 14mm 4px 14mm;border-top:1pt solid #ccc;font-family:Arial,sans-serif;font-size:6pt;color:#444;line-height:1.35;display:flex;justify-content:space-between;align-items:flex-end';
         ftr.innerHTML = \`
           <div style="flex:1;padding-right:10px">\${FOOTER_TEXT}</div>
           <div style="white-space:nowrap;font-size:7pt;font-weight:600">Sayfa \${pageNum} / \${TOPLAM}</div>
@@ -4595,22 +4595,39 @@ function sertOnizle() {
   .page{width:210mm;min-height:297mm;padding:12mm 14mm 10mm 14mm;margin:8mm auto;background:#fff;display:flex;flex-direction:column;box-shadow:0 2px 8px rgba(0,0,0,.15)}
   @page{size:A4 portrait;margin:0}
   @media print{
-    html,body{width:210mm;background:#fff}
+    html,body{width:210mm;margin:0;padding:0;background:#fff}
     .no-print{display:none!important}
     .page{
-      width:210mm;min-height:297mm;
+      width:210mm;
+      height:297mm;
       padding:12mm 14mm 10mm 14mm;
       margin:0;box-shadow:none;
+      overflow:hidden;
+      break-after:page;
       page-break-after:always;
       page-break-inside:avoid;
+      display:flex;flex-direction:column;
     }
-    .page:last-of-type{page-break-after:avoid}
+    .page:last-of-type{break-after:avoid;page-break-after:avoid}
+    #pdfPagesContainer{background:#fff!important;padding:0!important}
     #pdfPagesContainer>div{
-      width:210mm;margin:0!important;box-shadow:none!important;
-      page-break-after:always;page-break-inside:avoid;
+      width:210mm!important;
+      height:297mm!important;
+      margin:0!important;
+      box-shadow:none!important;
+      overflow:hidden;
+      break-after:page;
+      page-break-after:always;
+      page-break-inside:avoid;
+      display:flex!important;flex-direction:column!important;
     }
-    #pdfPagesContainer>div:last-child{page-break-after:avoid}
-    #pdfPagesContainer canvas{width:100%!important}
+    #pdfPagesContainer>div:last-child{break-after:avoid;page-break-after:avoid}
+    #pdfPagesContainer canvas{
+      width:100%!important;
+      flex:1;
+      object-fit:contain;
+      display:block;
+    }
   }
   .no-print-bar{position:fixed;top:0;left:0;right:0;background:#222;color:#fff;padding:7px 16px;display:flex;gap:8px;align-items:center;z-index:999;font-family:Arial;font-size:12px}
   .no-print-bar button{background:#fff;color:#222;border:none;padding:4px 14px;border-radius:3px;font-weight:700;cursor:pointer}
