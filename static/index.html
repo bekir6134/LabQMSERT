@@ -4593,11 +4593,24 @@ function sertOnizle() {
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Arial,Helvetica,sans-serif;font-size:9pt;color:#111;background:#f0f0f0}
   .page{width:210mm;min-height:297mm;padding:12mm 14mm 10mm 14mm;margin:8mm auto;background:#fff;display:flex;flex-direction:column;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+  @page{size:A4 portrait;margin:0}
   @media print{
-    body{background:#fff}
+    html,body{width:210mm;background:#fff}
     .no-print{display:none!important}
-    .page{margin:0;padding:12mm 14mm 10mm 14mm;box-shadow:none;page-break-after:always}
-    .page:last-child{page-break-after:avoid}
+    .page{
+      width:210mm;min-height:297mm;
+      padding:12mm 14mm 10mm 14mm;
+      margin:0;box-shadow:none;
+      page-break-after:always;
+      page-break-inside:avoid;
+    }
+    .page:last-of-type{page-break-after:avoid}
+    #pdfPagesContainer>div{
+      width:210mm;margin:0!important;box-shadow:none!important;
+      page-break-after:always;page-break-inside:avoid;
+    }
+    #pdfPagesContainer>div:last-child{page-break-after:avoid}
+    #pdfPagesContainer canvas{width:100%!important}
   }
   .no-print-bar{position:fixed;top:0;left:0;right:0;background:#222;color:#fff;padding:7px 16px;display:flex;gap:8px;align-items:center;z-index:999;font-family:Arial;font-size:12px}
   .no-print-bar button{background:#fff;color:#222;border:none;padding:4px 14px;border-radius:3px;font-weight:700;cursor:pointer}
@@ -4646,7 +4659,7 @@ function sertOnizle() {
 
 <div class="no-print no-print-bar">
   <span style="font-weight:700">📄 Kalibrasyon Sertifikası — ${sertNo}</span>
-  <button onclick="window.print()">🖨️ Yazdır / PDF Kaydet</button>
+  <button onclick="doPrint()">🖨️ Yazdır / PDF Kaydet</button>
   <button onclick="window.close()" style="background:#ddd;color:#333">✕ Kapat</button>
 </div>
 <div style="height:42px" class="no-print"></div>
@@ -4886,11 +4899,25 @@ function sertOnizle() {
 
 ${olcumPdfSection}
 
+<script>
+function doPrint() {
+  const container = document.getElementById('pdfPagesContainer');
+  if(container) {
+    const loading = container.querySelector('.pdf-loading');
+    if(loading) {
+      alert('Ölçüm sayfaları henüz yüklenmedi, lütfen bekleyin.');
+      return;
+    }
+  }
+  window.print();
+}
+<\/script>
+
 </body></html>`;
 
-  const win = window.open('', '_blank');
-  win.document.write(html);
-  win.document.close();
+  const blob = new Blob([html], {type: 'text/html;charset=utf-8'});
+  const blobUrl = URL.createObjectURL(blob);
+  window.open(blobUrl, '_blank');
 }
 
 
