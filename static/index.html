@@ -1036,6 +1036,13 @@ th.sort-desc::after { content:' ↓'; opacity:1; color:var(--accent2); }
           <input id="mcAdi" placeholder="veya manuel girin">
         </div>
       </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Kategori</label>
+          <select id="mcKategori"><option value="">Seçiniz</option></select>
+        </div>
+        <div class="form-field"></div>
+      </div>
       <div class="form-row col3">
         <div class="form-field"><label>Marka</label><input id="mcMarka"></div>
         <div class="form-field"><label>Model</label><input id="mcModel"></div>
@@ -1637,11 +1644,6 @@ function doLogout() {
   }
 })();
 
-function doLogout() {
-  document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-  state.user = null;
-}
 
 // ═══════════════════════════════════════════════
 // NAVIGATION
@@ -2829,6 +2831,7 @@ function renderMusteriCihazlari(c) {
       <th class="sortable" onclick="sortTable('mc','model',this)">Model</th>
       <th class="sortable" onclick="sortTable('mc','seriNo',this)">Seri No</th>
       <th class="sortable" onclick="sortTable('mc','envNo',this)">Envanter</th>
+      <th class="sortable" onclick="sortTable('mc','kategoriId',this)">Kategori</th>
       <th class="sortable" onclick="sortTable('mc','methodKod',this)">Method</th>
       <th>İşlemler</th>
     </tr></thead>
@@ -2842,7 +2845,7 @@ function mcRows(filter, list) {
     const f=state.firmalar.find(x=>x.id===c.musteriId);
     return (c.ad+c.marka+c.model+c.seriNo+c.envNo).toLowerCase().includes(filter.toLowerCase())||(f?.ad||'').toLowerCase().includes(filter.toLowerCase());
   }) : state.musteriCihazlari);
-  if(!src.length) return `<tr><td colspan="8" class="table-empty">Kayıt bulunamadı.</td></tr>`;
+  if(!src.length) return `<tr><td colspan="9" class="table-empty">Kayıt bulunamadı.</td></tr>`;
   return src.map(c=>{
     const firma=state.firmalar.find(f=>f.id===c.musteriId);
     return `<tr>
@@ -2852,6 +2855,7 @@ function mcRows(filter, list) {
       <td>${c.model||'-'}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${c.seriNo||'-'}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${c.envNo||'-'}</td>
+      <td>${state.kategoriler.find(k=>k.id===c.kategoriId)?.ad||'-'}</td>
       <td><span class="chip">${c.methodKod||'-'}</span></td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-secondary btn-xs" onclick="editMCihaz(${c.id})">✏️</button>
@@ -2873,8 +2877,9 @@ function openMusteriCihazModal(id=null){
   const uSel=document.getElementById('mcUygunluk');
   uSel.innerHTML='<option value="">Seçiniz</option>'+state.uygunluklar.map(u=>`<option value="${u.id}">${u.tanim}</option>`).join('');
   ['mcAdi','mcMarka','mcModel','mcSeriNo','mcEnvNo','mcOlcumAraligi','mcCozunurluk','mcKalYer','mcDegKrit','mcNot'].forEach(x=>document.getElementById(x).value='');
-  if(id){const mc=state.musteriCihazlari.find(x=>x.id===id);if(mc){document.getElementById('mcMusteri').value=mc.musteriId;document.getElementById('mcAdi').value=mc.ad;document.getElementById('mcMarka').value=mc.marka||'';document.getElementById('mcModel').value=mc.model||'';document.getElementById('mcSeriNo').value=mc.seriNo||'';document.getElementById('mcEnvNo').value=mc.envNo||'';document.getElementById('mcOlcumAraligi').value=mc.olcumAraligi||'';document.getElementById('mcCozunurluk').value=mc.cozunurluk||'';document.getElementById('mcMethod').value=mc.methodKod||'';document.getElementById('mcUygunluk').value=mc.uygunlukId||'';document.getElementById('mcKalYer').value=mc.kalYer||'';document.getElementById('mcDegKrit').value=mc.degKrit||'';document.getElementById('mcNot').value=mc.not||'';}}
-  document.getElementById('musteriCihazModal')._editId=id;
+  const _katSel=document.getElementById('mcKategori');
+  if(_katSel) _katSel.innerHTML='<option value="">Seçiniz</option>'+state.kategoriler.map(k=>`<option value="${k.id}">${k.ad}</option>`).join('');
+  if(id){const mc=state.musteriCihazlari.find(x=>x.id===id);if(mc){document.getElementById('mcMusteri').value=mc.musteriId;document.getElementById('mcAdi').value=mc.ad;document.getElementById('mcMarka').value=mc.marka||'';document.getElementById('mcModel').value=mc.model||'';document.getElementById('mcSeriNo').value=mc.seriNo||'';document.getElementById('mcEnvNo').value=mc.envNo||'';document.getElementById('mcOlcumAraligi').value=mc.olcumAraligi||'';document.getElementById('mcCozunurluk').value=mc.cozunurluk||'';document.getElementById('mcMethod').value=mc.methodKod||'';document.getElementById('mcUygunluk').value=mc.uygunlukId||'';document.getElementById('mcKalYer').value=mc.kalYer||'';document.getElementById('mcDegKrit').value=mc.degKrit||'';document.getElementById('mcNot').value=mc.not||'';if(_katSel)_katSel.value=mc.kategoriId||'';}}
   openModal('musteriCihazModal');
 }
 function editMCihaz(id){openMusteriCihazModal(id);}
@@ -2883,6 +2888,7 @@ function deleteMCihaz(id){showConfirm('Müşteri cihazı silinsin mi?', ()=>{ st
 function getMCData(){
   return {
     musteriId:parseInt(document.getElementById('mcMusteri').value)||null,
+    kategoriId:parseInt(document.getElementById('mcKategori')?.value)||null,
     ad:document.getElementById('mcAdi').value.trim(),
     marka:document.getElementById('mcMarka').value,
     model:document.getElementById('mcModel').value,
