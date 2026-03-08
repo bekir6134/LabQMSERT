@@ -5040,10 +5040,72 @@ function _seciliIdler(grupId) {
   return ids;
 }
 
+// ── E-imza gerektiren geçişler ──────────────────────────────
+// hazirlaniyor→imzalandi ve imzalandi→onaylandi aşamalarında
+// PDF EronSign'a gönderilir, durum Railway'den otomatik güncellenir.
+// onaylandi→gonderildi doğrudan geçiş yapar (imza gerekmez).
+const EIMZA_GEREKEN = ['imzalandi', 'onaylandi'];
+const ERONSIGN_URL  = 'http://localhost:5500/pdfImzala';
+// Railway backend URL — production'da kendi adresinizi yazın
+const RAILWAY_URL   = window.location.origin;
+
+async function _eronSignaGonder(ids) {
+  // Her sertifika için PDF URL'si oluştur
+  const dosyalar = ids.map(id => {
+    const s = state.sertifikalar.find(x=>x.id===id);
+    const no = (s?.no || ('SERT-' + id)).replace(/[/\\s]/g, '-');
+    return {
+      sert_id:   id,
+      e_pdf_adi: `${id}+${no}.pdf`,
+      e_pdf_url: `${RAILWAY_URL}/api/sertifika-pdf/${id}`
+    };
+  });
+
+  try {
+    const resp = await fetch(ERONSIGN_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(dosyalar)
+    });
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const sonuc = await resp.json();
+    return { ok: true, sonuc };
+  } catch(e) {
+    // EronSign çalışmıyor veya ulaşılamıyor
+    if(e.message.includes('fetch') || e.message.includes('NetworkError') || e.message.includes('Failed')) {
+      return { ok: false, hata: 'EronSign servisine ulaşılamadı. localhost:5500 çalışıyor mu?' };
+    }
+    return { ok: false, hata: e.message };
+  }
+}
+
 function secilenleriGecir(mevcutDurum, hedefDurum, grupId) {
   const ids = _seciliIdler(grupId);
   if(!ids.length) { showToast('Önce sertifika seçin', 'warning'); return; }
   const hedefLabel = SERT_DURUM_MAP[hedefDurum]?.label || hedefDurum;
+
+  // E-imza gerektiren geçiş
+  if(EIMZA_GEREKEN.includes(hedefDurum)) {
+    showConfirm(
+      `${ids.length} sertifika e-imza için EronSign'a gönderilecek.\nEronSign servisi açık olmalı (localhost:5500).\n\nDevam edilsin mi?`,
+      async () => {
+        showToast(`${ids.length} PDF EronSign'a gönderiliyor...`, 'info');
+        const sonuc = await _eronSignaGonder(ids);
+        if(!sonuc.ok) {
+          showToast('❌ ' + sonuc.hata, 'error');
+          return;
+        }
+        showToast(
+          `✅ ${ids.length} PDF imzalama kuyruğuna alındı. EronSign imzaladıkça durum otomatik güncellenecek (~1 dk).`,
+          'success'
+        );
+      },
+      'Gönder'
+    );
+    return;
+  }
+
+  // Doğrudan geçiş (gonderildi vb.)
   showConfirm(`${ids.length} sertifika "${hedefLabel}" aşamasına alınsın mı?`, () => {
     const kim = state.currentUser?.username || 'Kullanici';
     const gun = new Date().toISOString().split('T')[0];
@@ -5051,9 +5113,7 @@ function secilenleriGecir(mevcutDurum, hedefDurum, grupId) {
       const s = state.sertifikalar.find(x=>x.id===id);
       if(!s) return;
       s.durum = hedefDurum;
-      if(hedefDurum==='imzalandi')  { s.imzalayanAd=kim; s.imzalamaTarih=gun; }
-      if(hedefDurum==='onaylandi')  { s.onaylayanAd=kim; s.onaylamaTarih=gun; }
-      if(hedefDurum==='gonderildi') { s.gonderenAd=kim;  s.gonderimTarih=gun; }
+      if(hedefDurum==='gonderildi') { s.gonderenAd=kim; s.gonderimTarih=gun; }
     });
     dbAutoSave(['sertifikalar']);
     updateSertBadge();
@@ -5066,13 +5126,34 @@ function tekSertGecir(id, hedefDurum) {
   const s = state.sertifikalar.find(x=>x.id===id);
   if(!s) return;
   const hedefLabel = SERT_DURUM_MAP[hedefDurum]?.label || hedefDurum;
+
+  // E-imza gerektiren geçiş
+  if(EIMZA_GEREKEN.includes(hedefDurum)) {
+    showConfirm(
+      `Sertifika e-imza için EronSign'a gönderilecek.\nEronSign servisi açık olmalı (localhost:5500).\n\nDevam edilsin mi?`,
+      async () => {
+        showToast('PDF EronSign\'a gönderiliyor...', 'info');
+        const sonuc = await _eronSignaGonder([id]);
+        if(!sonuc.ok) {
+          showToast('❌ ' + sonuc.hata, 'error');
+          return;
+        }
+        showToast(
+          '✅ PDF imzalama kuyruğuna alındı. EronSign imzaladıkça durum otomatik güncellenecek (~1 dk).',
+          'success'
+        );
+      },
+      'Gönder'
+    );
+    return;
+  }
+
+  // Doğrudan geçiş
   showConfirm(`Sertifika "${hedefLabel}" aşamasına alınsın mı?`, () => {
     const kim = state.currentUser?.username || 'Kullanici';
     const gun = new Date().toISOString().split('T')[0];
     s.durum = hedefDurum;
-    if(hedefDurum==='imzalandi')  { s.imzalayanAd=kim; s.imzalamaTarih=gun; }
-    if(hedefDurum==='onaylandi')  { s.onaylayanAd=kim; s.onaylamaTarih=gun; }
-    if(hedefDurum==='gonderildi') { s.gonderenAd=kim;  s.gonderimTarih=gun; }
+    if(hedefDurum==='gonderildi') { s.gonderenAd=kim; s.gonderimTarih=gun; }
     dbAutoSave(['sertifikalar']);
     updateSertBadge();
     showToast(`Sertifika "${hedefLabel}" yapıldı`, 'success');
