@@ -1036,10 +1036,6 @@ th.sort-desc::after { content:' ↓'; opacity:1; color:var(--accent2); }
           <input id="mcAdi" placeholder="veya manuel girin">
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-field"><label>Kategori</label><select id="mcKategori"><option value="">Seçiniz</option></select></div>
-        <div class="form-field"></div>
-      </div>
       <div class="form-row col3">
         <div class="form-field"><label>Marka</label><input id="mcMarka"></div>
         <div class="form-field"><label>Model</label><input id="mcModel"></div>
@@ -1422,12 +1418,12 @@ th.sort-desc::after { content:' ↓'; opacity:1; color:var(--accent2); }
 
 <!-- Önizleme Modal -->
 <div class="modal-overlay" id="onizlemeModal">
-  <div class="modal modal-lg">
+  <div class="modal modal-wide" style="max-height:90vh;display:flex;flex-direction:column">
     <div class="modal-header">
       <span class="modal-title" id="onizlemeTitle">Dosya Önizleme</span>
       <div class="modal-close" onclick="closeModal('onizlemeModal')">✕</div>
     </div>
-    <div class="modal-body" id="onizlemeBody" style="text-align:center"></div>
+    <div class="modal-body" id="onizlemeBody" style="text-align:center;flex:1;overflow:auto;padding:12px"></div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('onizlemeModal')">Kapat</button>
       <button class="btn btn-primary" id="onizlemeIndirBtn">⬇️ İndir</button>
@@ -2833,7 +2829,6 @@ function renderMusteriCihazlari(c) {
       <th class="sortable" onclick="sortTable('mc','model',this)">Model</th>
       <th class="sortable" onclick="sortTable('mc','seriNo',this)">Seri No</th>
       <th class="sortable" onclick="sortTable('mc','envNo',this)">Envanter</th>
-      <th class="sortable" onclick="sortTable('mc','kategoriId',this)">Kategori</th>
       <th class="sortable" onclick="sortTable('mc','methodKod',this)">Method</th>
       <th>İşlemler</th>
     </tr></thead>
@@ -2847,7 +2842,7 @@ function mcRows(filter, list) {
     const f=state.firmalar.find(x=>x.id===c.musteriId);
     return (c.ad+c.marka+c.model+c.seriNo+c.envNo).toLowerCase().includes(filter.toLowerCase())||(f?.ad||'').toLowerCase().includes(filter.toLowerCase());
   }) : state.musteriCihazlari);
-  if(!src.length) return `<tr><td colspan="9" class="table-empty">Kayıt bulunamadı.</td></tr>`;
+  if(!src.length) return `<tr><td colspan="8" class="table-empty">Kayıt bulunamadı.</td></tr>`;
   return src.map(c=>{
     const firma=state.firmalar.find(f=>f.id===c.musteriId);
     return `<tr>
@@ -2857,7 +2852,6 @@ function mcRows(filter, list) {
       <td>${c.model||'-'}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${c.seriNo||'-'}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${c.envNo||'-'}</td>
-      <td>${state.kategoriler.find(k=>k.id===c.kategoriId)?.ad||'-'}</td>
       <td><span class="chip">${c.methodKod||'-'}</span></td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-secondary btn-xs" onclick="editMCihaz(${c.id})">✏️</button>
@@ -2889,7 +2883,6 @@ function deleteMCihaz(id){showConfirm('Müşteri cihazı silinsin mi?', ()=>{ st
 function getMCData(){
   return {
     musteriId:parseInt(document.getElementById('mcMusteri').value)||null,
-    kategoriId:parseInt(document.getElementById('mcKategori')?.value)||null,
     ad:document.getElementById('mcAdi').value.trim(),
     marka:document.getElementById('mcMarka').value,
     model:document.getElementById('mcModel').value,
@@ -3201,8 +3194,16 @@ function kalBaslat(fisId,cihazId){
   const onaylayanSel=document.getElementById('kalOnaylayan');
   yapanSel.innerHTML='<option value="">Seçiniz</option>'+state.personeller.filter(p=>p.kalPers).map(p=>`<option value="${p.id}">${p.ad} ${p.soyad}</option>`).join('');
   onaylayanSel.innerHTML='<option value="">-</option>'+state.personeller.filter(p=>p.sertOnay).map(p=>`<option value="${p.id}">${p.ad} ${p.soyad}</option>`).join('');
-  if(state.user){const lp=state.personeller.find(p=>(p.ad+' '+p.soyad)===state.user.name);if(lp&&lp.kalPers)yapanSel.value=lp.id;}
-  const ilkOnay=state.personeller.find(p=>p.sertOnay);if(ilkOnay)onaylayanSel.value=ilkOnay.id;
+  // Giriş yapan kişiyi otomatik seç
+  const loginUser = state.user;
+  if(loginUser) {
+    const loginPersonel = state.personeller.find(p => p.ad+' '+p.soyad === loginUser.name || p.id === loginUser.id);
+    if(loginPersonel && loginPersonel.kalPers) yapanSel.value = loginPersonel.id;
+  }
+  // Onaylayan - sistemdeki ilk uygun kişi
+  const ilkOnaylayan = state.personeller.find(p=>p.sertOnay);
+  if(ilkOnaylayan) onaylayanSel.value = ilkOnaylayan.id;
+  // Tarihi bugün yap
   document.getElementById('kalTarih').value=new Date().toISOString().split('T')[0];
   document.getElementById('kalSonrakiTarih').value='';
   document.getElementById('kalNot').value='';
@@ -3225,20 +3226,22 @@ function saveKalibrasyon(){
     id:state.nextKalId++,
     cihazId,fisId,
     tarih,
-    sertNo:'',
+    sertNo: '', // Sertifika no Turkäk API'den gelecek
     yapanId,
     onaylayanId:parseInt(document.getElementById('kalOnaylayan').value)||null,
     sonrakiTarih:document.getElementById('kalSonrakiTarih').value,
     not:document.getElementById('kalNot').value
   };
+  if(!document.getElementById('kalibrasYonModal')._editId);
   state.kalibrasyon.push(kayit);
   // Durumu güncelle
   changeCKDurum(fisId,cihazId,'tamamlandi');
+  // Sertifika taslak oluştur (no boş - Turkäk API'den gelecek)
   const fis = state.cihazKabuller.find(k=>k.id===fisId);
   const mc2 = state.musteriCihazlari.find(x=>x.id===cihazId);
   state.sertifikalar.push({
     id: state.nextSertId++,
-    no: '',
+    no: '', // Turkäk API'den gelecek
     kalId: kayit.id,
     cihazId, fisId,
     firmaId: fis?.firmaId||null,
@@ -3250,7 +3253,7 @@ function saveKalibrasyon(){
   });
   updateSertBadge();
   closeModal('kalibrasYonModal');
-  showToast('Kalibrasyon kaydedildi · Sertifika taslağı oluşturuldu','success');
+  showToast('Kalibrasyon kaydedildi · Sertifika taslağı oluşturuldu (No: Turkäk\'tan gelecek)','success');
   renderPage('cihazKabul');
 }
 
@@ -4780,8 +4783,11 @@ function onizleDosyaState(i, tip, id){
     const arr = new Uint8Array(byteStr.length);
     for(let j=0; j<byteStr.length; j++) arr[j] = byteStr.charCodeAt(j);
     const blob = new Blob([arr], {type: mime});
-    window.open(URL.createObjectURL(blob), '_blank');
-  } catch(e) { showToast('Dosya açılamadı: ' + e.message, 'error'); }
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
+  } catch(e) {
+    showToast('Dosya açılamadı: ' + e.message, 'error');
+  }
 }
 
 function silDosyaState(i, tip, id){
@@ -4838,8 +4844,22 @@ function onizleDosya(idx, key) {
   };
 
   if (f.type === 'application/pdf' || f.ext === 'PDF') {
-    body.innerHTML = `<embed src="${f.dataUrl}" type="application/pdf" width="100%" height="500px" style="border-radius:var(--radius)">
-      <p class="text-muted" style="margin-top:8px">PDF görüntülenemiyor ise indirip açabilirsiniz.</p>`;
+    // data: URL'i Blob URL'ye çevir (tarayıcı güvenlik kısıtlamasını aşmak için)
+    try {
+      const byteStr = atob(f.dataUrl.split(',')[1]);
+      const arr = new Uint8Array(byteStr.length);
+      for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+      const blob = new Blob([arr], { type: 'application/pdf' });
+      const blobUrl = URL.createObjectURL(blob);
+      body.innerHTML = `<iframe src="${blobUrl}" width="100%" height="560px" style="border:none;border-radius:var(--radius)"></iframe>
+        <p class="text-muted" style="margin-top:8px">PDF görüntülenemiyor ise indirip açabilirsiniz.</p>`;
+    } catch(e) {
+      body.innerHTML = `<div style="padding:40px;text-align:center">
+        <div style="font-size:48px;margin-bottom:16px">📄</div>
+        <p style="color:var(--text);">${f.name}</p>
+        <p class="text-muted">PDF önizleme yüklenemedi. İndirmek için butona basın.</p>
+      </div>`;
+    }
   } else if (f.type.startsWith('image/')) {
     body.innerHTML = `<img src="${f.dataUrl}" class="file-preview-img" alt="${f.name}">`;
   } else {
