@@ -4511,12 +4511,52 @@ function sertOnizle() {
     ? `<img src="${muhurLogo}" style="width:72px;height:72px;object-fit:contain;border-radius:50%;display:block;margin:4px auto">`
     : `<div style="width:72px;height:72px;border:1pt solid #bbb;border-radius:50%;margin:4px auto"></div>`;
 
-  const olcumPdfHtml = s.ekPdfData
-    ? `<div class="page" style="padding:0">
-        <iframe src="data:application/pdf;base64,${s.ekPdfData}"
-          style="width:210mm;height:297mm;border:none;display:block"></iframe>
-      </div>`
-    : '';
+  // 3. sayfa: PDF blob URL hazırla
+  let pdfBlobUrl = '';
+  if(s.ekPdfData) {
+    try {
+      const byteStr = atob(s.ekPdfData);
+      const arr = new Uint8Array(byteStr.length);
+      for(let i=0;i<byteStr.length;i++) arr[i]=byteStr.charCodeAt(i);
+      const blob = new Blob([arr], {type:'application/pdf'});
+      pdfBlobUrl = URL.createObjectURL(blob);
+    } catch(e) { console.warn('PDF blob hatası:', e); }
+  }
+
+  const olcumPdfScript = pdfBlobUrl ? `
+    <script>
+    (async function() {
+      const pdfjsLib = window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const container = document.getElementById('pdfPagesContainer');
+      try {
+        const pdf = await pdfjsLib.getDocument('${pdfBlobUrl}').promise;
+        for(let p=1; p<=pdf.numPages; p++) {
+          const page = await pdf.getPage(p);
+          const viewport = page.getViewport({scale: 2.0});
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          canvas.style.cssText = 'width:210mm;display:block;margin:8mm auto;box-shadow:0 2px 8px rgba(0,0,0,.15)';
+          const ctx = canvas.getContext('2d');
+          await page.render({canvasContext:ctx, viewport}).promise;
+          container.appendChild(canvas);
+        }
+        container.querySelector('.pdf-loading')?.remove();
+      } catch(e) {
+        container.innerHTML = '<div style="padding:20px;color:red">PDF yüklenemedi: '+e.message+'</div>';
+      }
+    })();
+    <\/script>` : '';
+
+  const olcumPdfSection = pdfBlobUrl ? `
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>
+    <div id="pdfPagesContainer" style="background:#f0f0f0">
+      <div class="pdf-loading" style="text-align:center;padding:30px;font-family:Arial;font-size:13px;color:#555">
+        ⏳ Ölçüm sayfaları yükleniyor...
+      </div>
+    </div>
+    ${olcumPdfScript}` : '';
 
   const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">
 <title>Kalibrasyon Sertifikası ${sertNo}</title>
@@ -4815,7 +4855,7 @@ function sertOnizle() {
   </div>
 </div>
 
-${olcumPdfHtml}
+${olcumPdfSection}
 
 </body></html>`;
 
