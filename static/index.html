@@ -1531,6 +1531,95 @@ th.sort-desc::after { content:' ↓'; opacity:1; color:var(--accent2); }
 <!-- Toast Container -->
 <div id="toastContainer"></div>
 
+<!-- Sertifika Detay Modal -->
+<div class="modal-overlay" id="sertDetayModal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <span class="modal-title">📄 Sertifika Detayı Oluştur</span>
+      <div class="modal-close" onclick="closeModal('sertDetayModal')">✕</div>
+    </div>
+    <div class="modal-body" style="max-height:75vh;overflow-y:auto">
+
+      <!-- SAYFA 1 -->
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:16px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">📋 Sayfa 1 — Kapak Bilgileri</div>
+        <div class="form-row col2">
+          <div class="form-field"><label>Sertifika No</label><input id="sdSertNo" placeholder="Türkak API'den gelecek"></div>
+          <div class="form-field"><label>Yayımlanma Tarihi</label><input type="date" id="sdYayimTarih"></div>
+        </div>
+        <div class="form-row col2">
+          <div class="form-field"><label>Cihazın Sahibi (Firma)</label><input id="sdFirmaAd" readonly style="background:var(--bg2)"></div>
+          <div class="form-field"><label>Adres</label><input id="sdFirmaAdres" readonly style="background:var(--bg2)"></div>
+        </div>
+        <div class="form-row col2">
+          <div class="form-field"><label>İstek / Kabul No</label><input id="sdKabulNo" readonly style="background:var(--bg2)"></div>
+          <div class="form-field"><label>Kalibrasyon Tarihi</label><input id="sdKalTarih" readonly style="background:var(--bg2)"></div>
+        </div>
+        <div class="form-row col3">
+          <div class="form-field"><label>Cihaz Adı</label><input id="sdCihazAd" readonly style="background:var(--bg2)"></div>
+          <div class="form-field"><label>İmalatçı / Marka</label><input id="sdMarka" readonly style="background:var(--bg2)"></div>
+          <div class="form-field"><label>Tip / Model</label><input id="sdModel" readonly style="background:var(--bg2)"></div>
+        </div>
+        <div class="form-row col3">
+          <div class="form-field"><label>Seri No</label><input id="sdSeriNo" readonly style="background:var(--bg2)"></div>
+          <div class="form-field"><label>Demirbaş No</label><input id="sdEnvNo" readonly style="background:var(--bg2)"></div>
+          <div class="form-field"><label>Sonraki Kalibrasyon</label><input id="sdSonrakiTarih" readonly style="background:var(--bg2)"></div>
+        </div>
+        <div class="form-row col2">
+          <div class="form-field"><label>Kalibrasyonu Yapan</label><input id="sdYapan" readonly style="background:var(--bg2)"></div>
+          <div class="form-field"><label>Kalibrasyonu Onaylayan</label><input id="sdOnaylayan" readonly style="background:var(--bg2)"></div>
+        </div>
+        <div class="form-row col2">
+          <div class="form-field"><label>Toplam Sayfa Sayısı</label><input id="sdSayfaSayisi" readonly style="background:var(--bg2)" placeholder="Ölçüm PDF yüklenince hesaplanır"></div>
+          <div class="form-field"></div>
+        </div>
+      </div>
+
+      <!-- SAYFA 2 -->
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:16px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">🔬 Sayfa 2 — Teknik Bilgiler</div>
+        <div class="form-row col2">
+          <div class="form-field"><label>Kalibrasyona Kabul Tarihi</label><input id="sdKabulTarih" readonly style="background:var(--bg2)"></div>
+          <div class="form-field"><label>Ölçüm Aralığı</label><input id="sdOlcumAraligi" readonly style="background:var(--bg2)"></div>
+        </div>
+        <div class="form-row col2">
+          <div class="form-field"><label>Kalibrasyon Yapıldığı Yer</label><input id="sdKalYer" readonly style="background:var(--bg2)"></div>
+          <div class="form-field"><label>Prosedür</label><input id="sdProsedur" readonly style="background:var(--bg2)"></div>
+        </div>
+        <div class="form-row col2">
+          <div class="form-field"><label>Sıcaklık (°C) <span style="font-size:10px;color:var(--text3)">(kategoriden)</span></label><input id="sdSicaklik" placeholder="ör: 23 ± 2"></div>
+          <div class="form-field"><label>Nem (%) <span style="font-size:10px;color:var(--text3)">(kategoriden)</span></label><input id="sdNem" placeholder="ör: 50 ± 10"></div>
+        </div>
+        <div class="form-row col1">
+          <div class="form-field"><label>Referans Cihazlar</label><textarea id="sdRefCihazlar" rows="2" readonly style="background:var(--bg2)"></textarea></div>
+        </div>
+        <div class="form-row col1">
+          <div class="form-field"><label>Açıklamalar / Notlar</label><textarea id="sdAciklama" rows="2" placeholder="Varsa ek açıklamalar..."></textarea></div>
+        </div>
+        <div class="form-row col1">
+          <div class="form-field"><label>Görüş / Yorum</label><textarea id="sdGorus" rows="2" placeholder="Uygunluk beyanı, görüş veya yorum..."></textarea></div>
+        </div>
+      </div>
+
+      <!-- SAYFA 3 - Ölçüm PDF -->
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:16px">
+        <div style="font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">📎 Sayfa 3+ — Ölçüm Sonuçları PDF</div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <input type="file" id="sdOlcumPdf" accept="application/pdf" onchange="sdOlcumPdfYukle(this)" style="display:none">
+          <button class="btn btn-secondary" onclick="document.getElementById('sdOlcumPdf').click()">📂 Ölçüm PDF Yükle</button>
+          <div id="sdOlcumPdfInfo" style="font-size:13px;color:var(--text3)">Henüz yüklenmedi</div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('sertDetayModal')">İptal</button>
+      <button class="btn btn-secondary" onclick="sertOnizle()">👁️ Önizle / Yazdır</button>
+      <button class="btn btn-primary" onclick="saveSertDetay()">💾 Kaydet</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════
 // STATE
@@ -4283,6 +4372,234 @@ function renderSertifikalar(c) {
   html += `</div>`;
   c.innerHTML = html;
 }
+function sertOnizle() {
+  const sertId = document.getElementById('sertDetayModal')._sertId;
+  const s   = state.sertifikalar.find(x=>x.id===sertId);
+  if(!s) return;
+  const mc    = state.musteriCihazlari.find(x=>x.id===s.cihazId);
+  const firma = state.firmalar.find(f=>f.id===s.firmaId);
+  const fis   = state.cihazKabuller.find(k=>k.id===s.fisId);
+  const kal   = state.kalibrasyon.find(k=>k.id===s.kalId);
+  const det   = s.detay || {};
+  const labAd = document.getElementById('brandName')?.textContent || 'Laboratuvar';
+
+  const sertNo     = document.getElementById('sdSertNo').value || s.no || '—';
+  const yayimTarih = document.getElementById('sdYayimTarih').value || det.yayimTarih || '';
+  const sicaklik   = document.getElementById('sdSicaklik').value || det.sicaklik || '';
+  const nem        = document.getElementById('sdNem').value || det.nem || '';
+  const aciklama   = document.getElementById('sdAciklama').value || det.aciklama || '';
+  const gorus      = document.getElementById('sdGorus').value || det.gorus || '';
+  const prosedur   = document.getElementById('sdProsedur').value || '';
+  const refCihazlar= document.getElementById('sdRefCihazlar').value || '';
+  const sayfaSayisi= document.getElementById('sdSayfaSayisi').value || '';
+  const yapan      = document.getElementById('sdYapan').value || '';
+  const onaylayan  = document.getElementById('sdOnaylayan').value || '';
+
+  const fmtTarih = v => v ? (v.includes('-') ? v.split('-').reverse().join('.') : v) : '-';
+
+  const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">
+  <title>Kalibrasyon Sertifikası ${sertNo}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Arial',sans-serif;font-size:11pt;color:#111;background:#fff}
+    .page{width:210mm;min-height:297mm;padding:18mm 18mm 16mm 18mm;margin:0 auto;position:relative}
+    .page+.page{page-break-before:always}
+    @media print{.page{margin:0;padding:18mm 18mm 16mm 18mm}.no-print{display:none!important}}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1a5fa8;padding-bottom:12px;margin-bottom:18px}
+    .header-left .title{font-size:18pt;font-weight:700;color:#1a5fa8;letter-spacing:.5px}
+    .header-left .subtitle{font-size:9pt;color:#555;margin-top:3px}
+    .header-right{text-align:right}
+    .header-right .lab-name{font-size:13pt;font-weight:700;color:#111}
+    .header-right .sert-no{font-size:10pt;font-weight:700;color:#1a5fa8;margin-top:4px;background:#e8f0fb;padding:3px 8px;border-radius:3px;display:inline-block}
+    .section-title{font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#1a5fa8;border-bottom:1px solid #c5d8f0;padding-bottom:4px;margin:14px 0 8px}
+    table.info{width:100%;border-collapse:collapse;font-size:10pt}
+    table.info td{padding:4px 6px;vertical-align:top}
+    table.info td:first-child{color:#555;width:38%;font-size:9.5pt}
+    table.info td:last-child{font-weight:600}
+    table.data{width:100%;border-collapse:collapse;font-size:10pt;margin-top:6px}
+    table.data th{background:#1a5fa8;color:#fff;padding:6px 8px;text-align:left;font-size:9pt}
+    table.data td{padding:5px 8px;border-bottom:1px solid #e0e0e0}
+    table.data tr:nth-child(even) td{background:#f5f8ff}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+    .box{background:#f5f8ff;border:1px solid #c5d8f0;border-radius:4px;padding:10px 12px}
+    .footer-line{margin-top:auto;padding-top:10px;border-top:1px solid #ccc;font-size:8pt;color:#888;text-align:center}
+    .sig-area{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:28px}
+    .sig-box{border-top:1px solid #999;padding-top:6px;text-align:center;font-size:9pt;color:#555}
+    .acikari{background:#fffbea;border:1px solid #f0d050;border-radius:4px;padding:8px 12px;font-size:10pt;margin-top:6px}
+    .no-print-bar{position:fixed;top:0;left:0;right:0;background:#1a5fa8;color:#fff;padding:8px 20px;display:flex;gap:10px;align-items:center;z-index:999;font-family:Arial,sans-serif;font-size:13px}
+    .no-print-bar button{background:#fff;color:#1a5fa8;border:none;padding:5px 14px;border-radius:4px;font-weight:700;cursor:pointer;font-size:12px}
+  </style></head><body>
+
+  <div class="no-print no-print-bar">
+    <span style="font-weight:700">📄 Kalibrasyon Sertifikası Önizleme</span>
+    <button onclick="window.print()">🖨️ Yazdır / PDF</button>
+    <button onclick="window.close()">✕ Kapat</button>
+  </div>
+  <div style="height:40px" class="no-print"></div>
+
+  <!-- ═══ SAYFA 1 ═══ -->
+  <div class="page">
+    <div class="header">
+      <div class="header-left">
+        <div class="title">KALİBRASYON SERTİFİKASI</div>
+        <div class="subtitle">CALIBRATION CERTIFICATE</div>
+      </div>
+      <div class="header-right">
+        <div class="lab-name">${labAd}</div>
+        <div class="sert-no">${sertNo}</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="section-title">Cihazın Sahibi</div>
+        <table class="info">
+          <tr><td>Firma Adı</td><td>${firma?.ad||'-'}</td></tr>
+          <tr><td>Adres</td><td>${firma?.adres||firma?.il||'-'}</td></tr>
+          <tr><td>Tel</td><td>${firma?.teller?.[0]||'-'}</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="section-title">Sertifika Bilgileri</div>
+        <table class="info">
+          <tr><td>İstek / Kabul No</td><td>${fis?.fisNo||('#'+s.fisId)}</td></tr>
+          <tr><td>Yayımlanma Tarihi</td><td>${fmtTarih(yayimTarih)}</td></tr>
+          <tr><td>Toplam Sayfa</td><td>${sayfaSayisi||'-'}</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="section-title">Kalibrasyon Yapılan Cihaz</div>
+    <div class="three-col" style="margin-bottom:10px">
+      <div class="box"><div style="font-size:8pt;color:#666;margin-bottom:3px">Cihaz Adı</div><div style="font-weight:700">${mc?.ad||'-'}</div></div>
+      <div class="box"><div style="font-size:8pt;color:#666;margin-bottom:3px">İmalatçı / Marka</div><div style="font-weight:700">${mc?.marka||'-'}</div></div>
+      <div class="box"><div style="font-size:8pt;color:#666;margin-bottom:3px">Tip / Model</div><div style="font-weight:700">${mc?.model||'-'}</div></div>
+    </div>
+    <div class="three-col">
+      <div class="box"><div style="font-size:8pt;color:#666;margin-bottom:3px">Seri No</div><div style="font-weight:700">${mc?.seriNo||'-'}</div></div>
+      <div class="box"><div style="font-size:8pt;color:#666;margin-bottom:3px">Demirbaş No</div><div style="font-weight:700">${mc?.envNo||'-'}</div></div>
+      <div class="box"><div style="font-size:8pt;color:#666;margin-bottom:3px">Kalibrasyon Tarihi</div><div style="font-weight:700">${fmtTarih(kal?.tarih)}</div></div>
+    </div>
+
+    <div class="section-title">Personel</div>
+    <div class="two-col">
+      <table class="info">
+        <tr><td>Kalibrasyonu Yapan</td><td>${yapan||'-'}</td></tr>
+      </table>
+      <table class="info">
+        <tr><td>Kalibrasyonu Onaylayan</td><td>${onaylayan||'-'}</td></tr>
+      </table>
+    </div>
+
+    <div class="sig-area">
+      <div class="sig-box">Kalibrasyonu Yapan İmzası</div>
+      <div class="sig-box">Onaylayan İmzası</div>
+    </div>
+
+    <div class="footer-line">Bu sertifika ${labAd} tarafından düzenlenmiştir. • Sayfa 1 / ${sayfaSayisi||'?'}</div>
+  </div>
+
+  <!-- ═══ SAYFA 2 ═══ -->
+  <div class="page">
+    <div class="header">
+      <div class="header-left">
+        <div class="title" style="font-size:14pt">KALİBRASYON SERTİFİKASI — TEKNİK BİLGİLER</div>
+      </div>
+      <div class="header-right">
+        <div class="lab-name">${labAd}</div>
+        <div class="sert-no">${sertNo}</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="section-title">Kalibrasyon Bilgileri</div>
+        <table class="info">
+          <tr><td>Kab. Kabul Tarihi</td><td>${fmtTarih(fis?.tarih)}</td></tr>
+          <tr><td>Kalibrasyon Tarihi</td><td>${fmtTarih(kal?.tarih)}</td></tr>
+          <tr><td>Sonraki Kalibrasyon</td><td>${fmtTarih(kal?.sonrakiTarih)}</td></tr>
+          <tr><td>Kalibrasyon Yeri</td><td>${mc?.kalYer||'-'}</td></tr>
+          <tr><td>Ölçüm Aralığı</td><td>${mc?.olcumAraligi||'-'}</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="section-title">Ortam Şartları</div>
+        <table class="info">
+          <tr><td>Sıcaklık (°C)</td><td>${sicaklik||'-'}</td></tr>
+          <tr><td>Nem (%)</td><td>${nem||'-'}</td></tr>
+        </table>
+        <div class="section-title" style="margin-top:12px">Prosedür</div>
+        <div style="font-size:10pt;font-weight:600">${prosedur||'-'}</div>
+      </div>
+    </div>
+
+    <div class="section-title">Referans Cihazlar</div>
+    ${refCihazlar ? `<table class="data">
+      <thead><tr><th>Cihaz Adı</th><th>Marka/Model</th><th>Seri No</th><th>Sertifika No</th></tr></thead>
+      <tbody>${refCihazlar.split('\n').filter(Boolean).map(r=>{
+        const p=r.split('|').map(x=>x.trim());
+        return `<tr><td>${p[0]||'-'}</td><td>${p[1]||'-'}</td><td>${(p[2]||'').replace('S/N:','').trim()||'-'}</td><td>${(p[3]||'').replace('Sert:','').trim()||'-'}</td></tr>`;
+      }).join('')}</tbody>
+    </table>` : '<div style="color:#888;font-size:10pt">Referans cihaz bilgisi girilmemiş.</div>'}
+
+    ${aciklama ? `<div class="section-title">Açıklamalar</div><div class="acikari">${aciklama}</div>` : ''}
+    ${gorus    ? `<div class="section-title">Görüş / Yorum</div><div class="acikari">${gorus}</div>` : ''}
+
+    <div class="footer-line">Bu sertifika ${labAd} tarafından düzenlenmiştir. • Sayfa 2 / ${sayfaSayisi||'?'}</div>
+  </div>
+
+  </body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+function sdOlcumPdfYukle(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    // PDF sayfa sayısını hesapla
+    const arr = new Uint8Array(e.target.result);
+    const text = new TextDecoder('latin1').decode(arr);
+    const pages = (text.match(/\/Type\s*\/Page[^s]/g)||[]).length || 1;
+    const sertId = document.getElementById('sertDetayModal')._sertId;
+    const s = state.sertifikalar.find(x=>x.id===sertId);
+    if(s) {
+      s.ekPdfSayfa = pages;
+      s.ekPdfAd = file.name;
+      s.ekPdfData = btoa(String.fromCharCode(...arr));
+    }
+    document.getElementById('sdOlcumPdfInfo').textContent = `${file.name} (${pages} sayfa)`;
+    document.getElementById('sdSayfaSayisi').value = `${pages+2} sayfa (${pages} ölçüm + 2)`;
+    showToast(`PDF yüklendi: ${pages} sayfa`, 'success');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function saveSertDetay() {
+  const sertId = document.getElementById('sertDetayModal')._sertId;
+  const s = state.sertifikalar.find(x=>x.id===sertId);
+  if(!s) return;
+  const sertNo = document.getElementById('sdSertNo').value.trim();
+  if(sertNo) s.no = sertNo;
+  s.detay = {
+    sertNo:      sertNo,
+    yayimTarih:  document.getElementById('sdYayimTarih').value,
+    sicaklik:    document.getElementById('sdSicaklik').value,
+    nem:         document.getElementById('sdNem').value,
+    aciklama:    document.getElementById('sdAciklama').value,
+    gorus:       document.getElementById('sdGorus').value,
+  };
+  s.durum = 'hazirlaniyor';
+  dbAutoSave(['sertifikalar']);
+  closeModal('sertDetayModal');
+  renderPage('sertifikalar');
+  showToast('Sertifika detayı kaydedildi', 'success');
+}
+
 function grupImzala(mevcutDurum) {
   // Filtre uygulanmış görünür sertifikaları al
   const q     = (document.getElementById('sertArama')?.value||'').toLowerCase();
@@ -4483,9 +4800,65 @@ function clearSertifika(id) {
 function openSertDetay(sertId) {
   const s = state.sertifikalar.find(x=>x.id===sertId);
   if(!s) return;
-  const mc = state.musteriCihazlari.find(x=>x.id===s.cihazId);
-  const firma = state.firmalar.find(f=>f.id===s.firmaId);
-  showToast(`${s.no} · ${mc?.ad||'?'} — Sertifika detayı yakında aktif olacak`, 'info');
+  const mc     = state.musteriCihazlari.find(x=>x.id===s.cihazId);
+  const firma  = state.firmalar.find(f=>f.id===s.firmaId);
+  const fis    = state.cihazKabuller.find(k=>k.id===s.fisId);
+  const kal    = state.kalibrasyon.find(k=>k.id===s.kalId);
+  const kat    = state.kategoriler.find(k=>k.id===mc?.kategoriId);
+  const method = state.methodlar.find(m=>m.kod===mc?.methodKod);
+  const yapan  = state.personeller.find(p=>p.id===kal?.yapanId);
+  const onay   = state.personeller.find(p=>p.id===kal?.onaylayanId);
+
+  // Prosedürler
+  const prosStr = (method?.prosedurIds||[]).map(pid=>{
+    const pr=state.prosedurler?.find(p=>p.id===pid);
+    return pr ? `${pr.no} - ${pr.ad}` : '';
+  }).filter(Boolean).join(', ') || (method ? method.kod+' - '+method.ad : '-');
+
+  // Referans cihazlar
+  const refStr = (method?.refCihazIds||[]).map(rid=>{
+    const r=state.refCihazlar.find(x=>x.id===rid);
+    return r ? `${r.ad} | ${r.marka||''} ${r.model||''} | S/N: ${r.seriNo||'-'} | Sert: ${r.kalNo||r.sertNo||'-'}` : '';
+  }).filter(Boolean).join('\n') || '-';
+
+  // Ortam şartları kategoriden
+  const sicStr = kat ? `${kat.sicMin} ± ${kat.sicTol}` : '';
+  const nemStr = kat ? `${kat.nemMin} ± ${kat.nemTol}` : '';
+
+  // Mevcut kayıtlı detay varsa onu kullan
+  const det = s.detay || {};
+
+  // Form doldur
+  document.getElementById('sdSertNo').value        = s.no || det.sertNo || '';
+  document.getElementById('sdYayimTarih').value    = det.yayimTarih || new Date().toISOString().split('T')[0];
+  document.getElementById('sdFirmaAd').value       = firma?.ad || '';
+  document.getElementById('sdFirmaAdres').value    = firma?.adres || '';
+  document.getElementById('sdKabulNo').value       = fis?.fisNo || ('#'+s.fisId);
+  document.getElementById('sdKalTarih').value      = kal?.tarih ? kal.tarih.split('-').reverse().join('.') : '-';
+  document.getElementById('sdCihazAd').value       = mc?.ad || '';
+  document.getElementById('sdMarka').value         = mc?.marka || '';
+  document.getElementById('sdModel').value         = mc?.model || '';
+  document.getElementById('sdSeriNo').value        = mc?.seriNo || '';
+  document.getElementById('sdEnvNo').value         = mc?.envNo || '';
+  document.getElementById('sdSonrakiTarih').value  = kal?.sonrakiTarih ? kal.sonrakiTarih.split('-').reverse().join('.') : '-';
+  document.getElementById('sdYapan').value         = yapan  ? `${yapan.ad} ${yapan.soyad}`   : '-';
+  document.getElementById('sdOnaylayan').value     = onay   ? `${onay.ad} ${onay.soyad}`     : '-';
+  document.getElementById('sdKabulTarih').value    = fis?.tarih ? fis.tarih.split('-').reverse().join('.') : '-';
+  document.getElementById('sdOlcumAraligi').value  = mc?.olcumAraligi || '';
+  document.getElementById('sdKalYer').value        = mc?.kalYer || '';
+  document.getElementById('sdProsedur').value      = prosStr;
+  document.getElementById('sdSicaklik').value      = det.sicaklik || sicStr;
+  document.getElementById('sdNem').value           = det.nem || nemStr;
+  document.getElementById('sdRefCihazlar').value   = refStr;
+  document.getElementById('sdAciklama').value      = det.aciklama || '';
+  document.getElementById('sdGorus').value         = det.gorus || '';
+
+  const sayfaSayisi = s.ekPdfSayfa ? (s.ekPdfSayfa + 2) : '';
+  document.getElementById('sdSayfaSayisi').value   = sayfaSayisi ? `${sayfaSayisi} sayfa (${s.ekPdfSayfa} ölçüm + 2)` : '';
+  document.getElementById('sdOlcumPdfInfo').textContent = s.ekPdfAd || 'Henüz yüklenmedi';
+
+  document.getElementById('sertDetayModal')._sertId = sertId;
+  openModal('sertDetayModal');
 }
 
 // ═══════════════════════════════════════════════
