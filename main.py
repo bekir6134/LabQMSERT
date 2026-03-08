@@ -217,6 +217,192 @@ async def revize(req: RevizeRequest):
     except HTTPException: raise
     except Exception as e: raise HTTPException(500, str(e))
 
+
+# ── SERTİFİKA PDF ────────────────────────────
+import base64, datetime as dt
+from fastapi.responses import Response as FastAPIResponse
+
+try:
+    from weasyprint import HTML as WeasyprintHTML
+    WEASYPRINT_OK = True
+except ImportError:
+    WEASYPRINT_OK = False
+
+def _fmt_tarih(v):
+    if not v or v == "-": return "-"
+    try:
+        parts = str(v).split("-")
+        if len(parts) == 3:
+            return f"{parts[2]}.{parts[1]}.{parts[0]}"
+    except Exception:
+        pass
+    return str(v)
+
+def _build_sertifika_html(s, mc, firma, fis, kal, det, ay, fv):
+    lab_ad=ay.get("labAdi","Laboratuvar"); lab_adres=ay.get("labAdres","")
+    lab_tel=ay.get("labTel",""); lab_mail=ay.get("labMail",""); akred_no=ay.get("akredNo","")
+    lab_logo=ay.get("labLogo",""); turkak_logo=ay.get("turkakLogo",""); muhur_logo=ay.get("muhurLogo","")
+    sert_no=fv.get("sertNo") or s.get("no") or "—"
+    yayim_tarih=fv.get("yayimTarih") or det.get("yayimTarih") or ""
+    sicaklik=fv.get("sicaklik") or det.get("sicaklik") or ""
+    nem_val=fv.get("nem") or det.get("nem") or ""
+    aciklama=fv.get("aciklama") or det.get("aciklama") or ""
+    gorus=fv.get("gorus") or det.get("gorus") or ""
+    prosedur_str=fv.get("prosedur",""); ref_str=fv.get("refCihazlar","")
+    yapan=fv.get("yapan",""); onaylayan=fv.get("onaylayan","")
+    ek_sayfa=s.get("ekPdfSayfa",0) or 0; toplam=(ek_sayfa+2) if ek_sayfa else "?"
+    logo_h=f'<img src="{lab_logo}" style="max-height:80px;max-width:140px;object-fit:contain">' if lab_logo else ""
+    turkak_h=f'<img src="{turkak_logo}" style="max-height:80px;max-width:140px;object-fit:contain">' if turkak_logo else ""
+    muhur_h=(f'<img src="{muhur_logo}" style="width:72px;height:72px;object-fit:contain;border-radius:50%;display:block;margin:4px auto">' if muhur_logo else '<div style="width:72px;height:72px;border:1pt solid #bbb;border-radius:50%;margin:4px auto"></div>')
+    pros_rows=""
+    for p in [x.strip() for x in prosedur_str.split(",") if x.strip()]:
+        parts=p.split(" - ")
+        pros_rows+=f'<tr><td style="padding:4px 8px;border:1px solid #ccc">{parts[0]}</td><td style="padding:4px 8px;border:1px solid #ccc">{" - ".join(parts[1:]) if len(parts)>1 else ""}</td></tr>'
+    if not pros_rows: pros_rows='<tr><td colspan="2" style="padding:4px 8px;border:1px solid #ccc;color:#888">—</td></tr>'
+    ref_rows=""
+    for r in [x for x in ref_str.split("\n") if x.strip()]:
+        p=[x.strip() for x in r.split("|")]
+        ad=p[0] if len(p)>0 else "-"; mm=p[1] if len(p)>1 else "-"
+        sn=(p[2] if len(p)>2 else "").replace("S/N:","").strip() or "-"
+        srt=(p[3] if len(p)>3 else "").replace("Sert:","").strip() or "-"
+        ref_rows+=f'<tr><td style="padding:4px 8px;border:1px solid #ccc">{ad}</td><td style="padding:4px 8px;border:1px solid #ccc">{mm}</td><td style="padding:4px 8px;border:1px solid #ccc">{sn}</td><td style="padding:4px 8px;border:1px solid #ccc">-</td><td style="padding:4px 8px;border:1px solid #ccc">{srt}</td><td style="padding:4px 8px;border:1px solid #ccc">{akred_no or "-"}</td></tr>'
+    if not ref_rows: ref_rows='<tr><td colspan="6" style="padding:4px 8px;border:1px solid #ccc;color:#888">—</td></tr>'
+    mc_ad=mc.get("ad","-"); mc_marka=mc.get("marka","-"); mc_model=mc.get("model","-")
+    mc_seri=mc.get("seriNo","-"); mc_env=mc.get("envNo","-")
+    mc_aralik=mc.get("olcumAraligi","-"); mc_yer=mc.get("kalYer","") or lab_adres or "-"
+    firma_ad=firma.get("ad","-"); firma_adres=firma.get("adres","") or firma.get("il","-")
+    fis_no=fis.get("fisNo","") or f"#{s.get('fisId','')}"
+    kal_tarih=_fmt_tarih(kal.get("tarih","")); kal_sonraki=_fmt_tarih(kal.get("sonrakiTarih",""))
+    fis_tarih=_fmt_tarih(fis.get("tarih",""))
+    css="""*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,Helvetica,sans-serif;font-size:9pt;color:#111;background:#fff}.page{width:210mm;min-height:297mm;padding:12mm 14mm 10mm 14mm;margin:0 auto;background:#fff;display:flex;flex-direction:column;page-break-after:always}.page:last-of-type{page-break-after:avoid}@page{size:A4 portrait;margin:0}.hdr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}.hdr-center-name{text-align:center;font-size:14pt;font-weight:700;line-height:1.25;margin-bottom:2px}.hdr-center-addr{text-align:center;font-size:8.5pt;color:#333;margin-bottom:5px}.hdr-title-bar{border-top:2pt solid #000;border-bottom:2pt solid #000;text-align:center;padding:4px 0;margin-bottom:6px}.hdr-title-bar .tr{font-size:13pt;font-weight:700}.hdr-title-bar .en{font-size:8.5pt;font-style:italic;color:#444}.sert-row{display:flex;justify-content:space-between;font-size:8.5pt;font-weight:700;margin-bottom:8px}.info-tbl{width:100%;border-collapse:collapse;font-size:8.5pt;margin-bottom:8px;border:1pt solid #000}.info-tbl tr{border-bottom:0.5pt solid #ccc}.info-tbl tr:last-child{border-bottom:none}.info-tbl td{padding:3.5px 8px;vertical-align:top;line-height:1.4}.info-tbl .lbl{width:34%;color:#333}.info-tbl .lbl small{display:block;font-size:7pt;color:#777;font-style:italic}.info-tbl .val{font-weight:600}.info-tbl .sep{width:10px;color:#555}.akred-text{font-size:7.8pt;line-height:1.5;color:#222;margin-bottom:8px}.akred-text p{margin-bottom:3px}.sig-row{display:flex;justify-content:space-around;align-items:flex-end;margin-top:auto;padding-top:10px;border-top:1pt solid #bbb}.sig-box{text-align:center;font-size:8pt}.sig-box .lbl{font-size:7.5pt;color:#555;margin-bottom:4px;font-style:italic}.sig-box .name{font-weight:700;font-size:8.5pt;margin-top:4px}.sig-box .date{font-size:8pt;color:#333}.pg-footer{border-top:1pt solid #bbb;margin-top:6px;padding-top:4px;font-size:7pt;color:#555;display:flex;justify-content:space-between}.pg-num{text-align:center;font-size:7pt;color:#888;margin-top:3px}.p2hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2pt solid #000;padding-bottom:6px;margin-bottom:8px}.p2hdr-title{font-size:12pt;font-weight:700}.p2hdr-no{font-size:8.5pt;font-weight:700;text-align:right}.kabul-bar{display:flex;justify-content:space-between;background:#f3f3f3;border:1pt solid #ccc;padding:4px 10px;font-size:8pt;margin-bottom:8px}.sec-hdr{background:#000;color:#fff;font-size:8pt;font-weight:700;padding:3px 10px}.sec-body{border:1pt solid #000;border-top:none;padding:5px 10px;font-size:8.5pt;line-height:1.5}.sec-body-italic{font-size:7.5pt;color:#555;font-style:italic;margin-top:3px}.dtbl{width:100%;border-collapse:collapse;font-size:8pt}.dtbl th{background:#e0e0e0;padding:4px 8px;border:1px solid #bbb;font-size:7.5pt;font-weight:700;text-align:left}.dtbl td{padding:4px 8px;border:1px solid #bbb}"""
+    return f"""<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>Kalibrasyon Sertifikasi {sert_no}</title><style>{css}</style></head><body>
+<div class="page">
+  <div class="hdr-top"><div style="width:140px">{logo_h}</div><div style="flex:1"></div><div style="width:140px;text-align:right">{turkak_h}</div></div>
+  <div class="hdr-center-name">{lab_ad}</div><div class="hdr-center-addr">{lab_adres}</div>
+  <div class="hdr-title-bar"><div class="tr">KALİBRASYON SERTİFİKASI</div><div class="en">Calibration Certificate</div></div>
+  <div class="sert-row"><span>{sert_no}</span><span>{akred_no}</span></div>
+  <table class="info-tbl">
+    <tr><td class="lbl">Cihazin Sahibi<small>Customer</small></td><td class="sep">:</td><td class="val">{firma_ad}</td></tr>
+    <tr><td class="lbl">Adres<small>Address</small></td><td class="sep">:</td><td class="val">{firma_adres}</td></tr>
+    <tr><td class="lbl">Istek Numarasi<small>Order No</small></td><td class="sep">:</td><td class="val">{fis_no}</td></tr>
+    <tr><td class="lbl">Makine / Cihaz<small>Instrument / Device</small></td><td class="sep">:</td><td class="val">{mc_ad}</td></tr>
+    <tr><td class="lbl">Imalatci<small>Manufacturer</small></td><td class="sep">:</td><td class="val">{mc_marka}</td></tr>
+    <tr><td class="lbl">Tip<small>Type</small></td><td class="sep">:</td><td class="val">{mc_model}</td></tr>
+    <tr><td class="lbl">Seri Numarasi<small>Serial Number</small></td><td class="sep">:</td><td class="val">{mc_seri}</td></tr>
+    <tr><td class="lbl">Kalibrasyon Tarihi<small>Date of Calibration</small></td><td class="sep">:</td><td class="val">{kal_tarih}</td></tr>
+    <tr><td class="lbl">Sertifikanin Sayfa Sayisi<small>Number of Pages</small></td><td class="sep">:</td><td class="val">{toplam}</td></tr>
+    <tr><td class="lbl">Demirbas Numarasi<small>Device ID Number</small></td><td class="sep">:</td><td class="val">{mc_env}</td></tr>
+  </table>
+  <div class="akred-text">
+    <p>Bu kalibrasyon sertifikasi, Uluslararasi Birimler Sisteminde (SI) tanimlanmis birimlerin ulusal olcum standartlarina izlenebilirligini belgelemektedir.</p>
+    <p><em>This calibration documents the traceability to national standards, which realize the unit of measurement according to the International System of Units (SI).</em></p>
+    <p>{lab_ad} kalibrasyon laboratuvari, Turk Akreditasyon Kurumu (TURKAK) tarafindan TS EN ISO/IEC 17025:2017 standardina gore akredite edilmistir. Akreditasyon dosya numarasi: <strong>{akred_no}</strong></p>
+  </div>
+  <div class="sig-row">
+    <div class="sig-box"><div class="lbl">Muhur / <em>Seal</em></div>{muhur_h}</div>
+    <div class="sig-box"><div class="lbl">Yayimlandi Tarihi / <em>Date</em></div><div class="name">{_fmt_tarih(yayim_tarih)}</div></div>
+    <div class="sig-box"><div class="lbl">Kalibrasyonu Yapan / <em>Calibrated by</em></div><div style="font-size:7pt;color:#999;font-style:italic;margin:6px 0 2px">e-imzalidir</div><div class="name">{yapan or "-"}</div><div class="date">{kal_tarih}</div></div>
+    <div class="sig-box"><div class="lbl">Onaylayan / Tarih / <em>Approval / Date</em></div><div style="font-size:7pt;color:#999;font-style:italic;margin:6px 0 2px">e-imzalidir</div><div class="name">{onaylayan or "-"}</div><div class="date">{_fmt_tarih(yayim_tarih)}</div></div>
+  </div>
+  <div class="pg-footer"><span>{lab_ad} | Tel: {lab_tel} | {lab_adres}</span><span>e-mail: {lab_mail}</span></div>
+  <div class="pg-num">Sayfa 1 / {toplam}</div>
+</div>
+<div class="page">
+  <div class="p2hdr"><div class="p2hdr-title">{lab_ad}</div><div class="p2hdr-no">{akred_no}<br>{sert_no}</div></div>
+  <div class="kabul-bar"><span><b>Kalibrasyona Kabul Tarihi :</b> {fis_tarih}</span><span><b>Gelecek Kalibrasyon Tarihi :</b> {kal_sonraki}</span></div>
+  <div style="margin-bottom:6px"><div class="sec-hdr">1. KALIBRASYON YAPILAN CIHAZ BILGILERI / CALIBRATED DEVICE INFORMATION</div><div style="border:1pt solid #000;border-top:none"><table class="dtbl"><tr><td style="width:22%;color:#444">Makine/Cihaz<br><small>Instrument/Device</small></td><td style="width:28%;font-weight:600">{mc_ad}</td><td style="width:22%;color:#444">Seri No<br><small>Serial Number</small></td><td style="font-weight:600">{mc_seri}</td></tr><tr><td style="color:#444">Imalatci<br><small>Manufacturer</small></td><td style="font-weight:600">{mc_marka}</td><td style="color:#444">Olcum Araligi<br><small>Measurement Range</small></td><td style="font-weight:600">{mc_aralik}</td></tr><tr><td style="color:#444">Tip<br><small>Type</small></td><td style="font-weight:600">{mc_model}</td><td style="color:#444">Kalibrasyon Yeri<br><small>Location</small></td><td style="font-weight:600">{mc_yer}</td></tr></table></div></div>
+  <div style="margin-bottom:6px"><div class="sec-hdr">2. ORTAM SARTLARI / ENVIRONMENT CONDITIONS</div><div class="sec-body">Sicaklik : ({sicaklik or "-"}) C &nbsp;&nbsp; Nem : ({nem_val or "-"}) %</div></div>
+  <div style="margin-bottom:6px"><div class="sec-hdr">3. OLCUM SARTLARI / MEASUREMENT CONDITIONS</div><div class="sec-body">Cihaz, kalibrasyon oncesi laboratuvarda bekletilerek ortam sartlarina uyum sagladiktan sonra olcumler gerceklestirilmistir.<div class="sec-body-italic">Measurements have been carried out after the instruments were maintained in the suitable area.</div></div></div>
+  <div style="margin-bottom:6px"><div class="sec-hdr">4. OLCUM BELIRSIZLIGI / MEASUREMENT UNCERTAINTY</div><div class="sec-body">Beyan edilen genisletilmis olcum belirsizligi k=2 kapsam faktoru ile yaklasik %95 guvenilirlik seviyesini saglamaktadir.<div class="sec-body-italic">The reported expanded uncertainty is stated as the standard uncertainty multiplied by k=2, corresponding to approximately 95% coverage probability.</div></div></div>
+  <div style="margin-bottom:6px"><div class="sec-hdr">5. KALIBRASYON PROCEDURLERI / CALIBRATION PROCEDURES</div><div style="border:1pt solid #000;border-top:none"><table class="dtbl"><thead><tr><th>Prosedur No</th><th>Prosedur Adi</th></tr></thead><tbody>{pros_rows}</tbody></table></div></div>
+  <div style="margin-bottom:6px"><div class="sec-hdr">6. KALIBRASYONDA KULLANILAN REFERANSLAR / REFERENCES</div><div style="border:1pt solid #000;border-top:none"><table class="dtbl"><thead><tr><th>Demirbas No</th><th>Cihaz/Marka/Model</th><th>Seri No</th><th>Gel. Kal. Tarihi</th><th>Sertifika No</th><th>Izlenebilir</th></tr></thead><tbody>{ref_rows}</tbody></table></div></div>
+  <div style="margin-bottom:6px"><div class="sec-hdr">7. ACIKLAMALAR / REMARKS</div><div class="sec-body" style="min-height:26px">{aciklama or "Kalibrasyon sonuclari, kalibrasyon tarihinden itibaren gecerlidir."}<div style="margin-top:4px;font-weight:700">Bu Kalibrasyon Sertifikasi, TS EN ISO/IEC 17025 standardinda belirtilen yukumlulukler cercevesinde tanzim edilmistir.</div></div></div>
+  <div style="margin-bottom:6px"><div class="sec-hdr">8. UYGUNLUK DEGERLENDIRME / CONFORMITY ASSESSMENT</div><div class="sec-body">Olcum sonuclari raporda belirtilmis olup, degerlendirme kullaniciya birakilmistir.</div></div>
+  <div style="margin-bottom:6px"><div class="sec-hdr">9. GORUS VE YORUMLAR / OPINION AND COMMENTS</div><div class="sec-body" style="min-height:22px">{gorus or "—"}</div></div>
+  <div style="margin-top:auto"><div style="font-size:7pt;color:#444;text-align:center;border-top:1pt solid #bbb;padding-top:4px;margin-bottom:4px">Bu sertifika dijital imzalidir. Laboratuvarin yazili izni alinmadan kopyalanamaz.</div>
+  <div class="pg-footer"><span>{lab_ad} | Tel: {lab_tel} | {lab_adres}</span><span>e-mail: {lab_mail}</span></div>
+  <div class="pg-num">Sayfa 2 / {toplam}</div></div>
+</div></body></html>"""
+
+@api.get("/sertifika-pdf/{sert_id}")
+async def sertifika_pdf_indir(sert_id: int):
+    if not WEASYPRINT_OK:
+        raise HTTPException(503, "weasyprint kurulu degil")
+    try:
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT key, value FROM app_state")
+        state = {r["key"]: json.loads(r["value"]) for r in rows}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+    sertler = state.get("sertifikalar", [])
+    s = next((x for x in sertler if x.get("id") == sert_id), None)
+    if not s:
+        raise HTTPException(404, f"Sertifika bulunamadi: {sert_id}")
+    mc    = next((x for x in state.get("musteriCihazlari",[]) if x.get("id")==s.get("cihazId")), {})
+    firma = next((x for x in state.get("firmalar",[])         if x.get("id")==s.get("firmaId")), {})
+    fis   = next((x for x in state.get("cihazKabuller",[])    if x.get("id")==s.get("fisId")),   {})
+    kal   = next((x for x in state.get("kalibrasyon",[])       if x.get("id")==s.get("kalId")),   {})
+    det   = s.get("detay", {}); ay = state.get("labAyarlari", {})
+    personeller = state.get("personeller", [])
+    def pers_ad(pid):
+        p = next((x for x in personeller if x.get("id")==pid), None)
+        return f"{p.get('ad','')} {p.get('soyad','')}".strip() if p else ""
+    methodlar=state.get("methodlar",[]); prosedurler=state.get("prosedurler",[]); refler=state.get("refCihazlar",[])
+    method=next((x for x in methodlar if x.get("kod")==mc.get("methodKod","")), None)
+    prosedur_str=""; ref_str=""
+    if method:
+        pros=[p for p in prosedurler if p.get("id") in method.get("prosedurIds",[])]
+        prosedur_str=", ".join([f"{p.get('no','')} - {p.get('ad','')}" for p in pros])
+        refs=[r for r in refler if r.get("id") in method.get("refCihazIds",[])]
+        ref_str="\n".join([f"{r.get('no','-')} | {r.get('ad','-')} {r.get('marka','')} {r.get('model','')} | S/N:{r.get('seriNo','-')} | Sert:{r.get('sertNo','-')}" for r in refs])
+    fv={"sertNo":s.get("no") or det.get("sertNo",""),"yayimTarih":det.get("yayimTarih",""),"sicaklik":det.get("sicaklik",""),"nem":det.get("nem",""),"aciklama":det.get("aciklama",""),"gorus":det.get("gorus",""),"prosedur":prosedur_str,"refCihazlar":ref_str,"yapan":pers_ad(kal.get("yapanId")),"onaylayan":pers_ad(kal.get("onaylayanId"))}
+    html_str=_build_sertifika_html(s,mc,firma,fis,kal,det,ay,fv)
+    pdf_bytes=WeasyprintHTML(string=html_str).write_pdf()
+    no_safe=(s.get("no") or f"SERT-{sert_id}").replace("/","-").replace(" ","_")
+    filename=f"{sert_id}+{no_safe}.pdf"
+    return FastAPIResponse(content=pdf_bytes, media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+class ImzaliPdfRequest(BaseModel):
+    sert_id: int; dosya_adi: str; pdf_data: str; token: str
+
+INTERNAL_TOKEN = "labqcert_internal_2026"
+
+@api.post("/imzali-pdf-yukle")
+async def imzali_pdf_yukle(req: ImzaliPdfRequest):
+    if req.token != INTERNAL_TOKEN:
+        raise HTTPException(401, "Gecersiz token")
+    try:
+        base64.b64decode(req.pdf_data)
+    except Exception:
+        raise HTTPException(400, "Gecersiz base64")
+    try:
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT key, value FROM app_state")
+        state = {r["key"]: json.loads(r["value"]) for r in rows}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+    sertler=state.get("sertifikalar",[])
+    s=next((x for x in sertler if x.get("id")==req.sert_id), None)
+    if not s:
+        raise HTTPException(404, f"Sertifika bulunamadi: {req.sert_id}")
+    s["imzaliPdfData"]=req.pdf_data; s["imzaliPdfAdi"]=req.dosya_adi
+    if s.get("durum")=="hazirlaniyor":
+        s["durum"]="imzalandi"; s["imzalamaTarih"]=dt.date.today().isoformat(); yeni_durum="imzalandi"
+    elif s.get("durum")=="imzalandi":
+        s["durum"]="onaylandi"; s["onaylamaTarih"]=dt.date.today().isoformat(); yeni_durum="onaylandi"
+    else:
+        yeni_durum=s.get("durum")
+    try:
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute("""INSERT INTO app_state (key, value, updated) VALUES ('sertifikalar',$1::jsonb,NOW()) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value,updated=NOW()""", json.dumps(sertler))
+    except Exception as e:
+        raise HTTPException(500, str(e))
+    return {"ok": True, "sert_id": req.sert_id, "yeni_durum": yeni_durum}
+
 # ── APP ───────────────────────────────────────
 app = FastAPI(title="LabQCert")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
