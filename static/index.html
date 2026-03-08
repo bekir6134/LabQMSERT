@@ -2172,7 +2172,7 @@ function deletePersonel(id) {
     state.personeller=state.personeller.filter(p=>p.id!==id);
     renderPersonelGrid();
     showToast('Personel silindi','info');
-  dbAutoSave(["personeller"]);
+    dbAutoSave(["personeller"]);
   });
 }
 
@@ -2509,7 +2509,7 @@ function openCihazTipiModal(id=null) {
   openModal('cihazTipiModal');
 }
 function editCihazTipi(id){openCihazTipiModal(id);}
-function deleteCihazTipi(id){ showConfirm('Cihaz tipi silinsin mi?', ()=>{ state.cihazTipleri=state.cihazTipleri.filter(c=>c.id!==id); renderPage('cihazTipleri'); showToast('Silindi','info'); dbAutoSave(["teklifler"]); dbAutoSave(["musteriCihazlari"]); }); }
+function deleteCihazTipi(id){ showConfirm('Cihaz tipi silinsin mi?', ()=>{ state.cihazTipleri=state.cihazTipleri.filter(c=>c.id!==id); renderPage('cihazTipleri'); showToast('Silindi','info'); dbAutoSave(["cihazTipleri"]); }); }
   dbAutoSave(["teklifler"]);
   dbAutoSave(["refCihazlar"]);
 function saveCihazTipi(){
@@ -2568,7 +2568,7 @@ function openUygunlukModal(id=null){
   openModal('uygunlukModal');
 }
 function editUygunluk(id){openUygunlukModal(id);}
-function deleteUygunluk(id){showConfirm('Uygunluk tanımı silinsin mi?', ()=>{ state.uygunluklar=state.uygunluklar.filter(u=>u.id!==id); renderPage('uygunluk'); showToast('Silindi','info'); }); }
+function deleteUygunluk(id){showConfirm('Uygunluk tanımı silinsin mi?', ()=>{ state.uygunluklar=state.uygunluklar.filter(u=>u.id!==id); renderPage('uygunluk'); showToast('Silindi','info'); dbAutoSave(["uygunluklar"]); }); }
 function saveUygunluk(){
   const tanim=document.getElementById('uTanim').value.trim();
   if(!tanim){showToast('Tanım zorunlu','error');return;}
@@ -2689,7 +2689,7 @@ function openRefCihazModal(id=null){
   openModal('refCihazModal');
 }
 function editRefCihaz(id){openRefCihazModal(id);}
-function deleteRefCihaz(id){showConfirm('Referans cihaz silinsin mi?', ()=>{ state.refCihazlar=state.refCihazlar.filter(r=>r.id!==id); renderPage('referansCihaz'); showToast('Silindi','info'); }); }
+function deleteRefCihaz(id){showConfirm('Referans cihaz silinsin mi?', ()=>{ state.refCihazlar=state.refCihazlar.filter(r=>r.id!==id); renderPage('referansCihaz'); showToast('Silindi','info'); dbAutoSave(["refCihazlar"]); }); }
 function saveRefCihaz(){
   const ad=document.getElementById('rcAdi').value.trim();
   if(!ad){showToast('Cihaz adı zorunlu','error');return;}
@@ -2781,7 +2781,7 @@ function openProsedurModal(id=null){
   openModal('prosedurModal');
 }
 function editProsedur(id){openProsedurModal(id);}
-function deleteProsedur(id){showConfirm('Prosedür silinsin mi?', ()=>{ state.prosedurler=state.prosedurler.filter(p=>p.id!==id); renderPage('prosedurler'); showToast('Silindi','info'); }); }
+function deleteProsedur(id){showConfirm('Prosedür silinsin mi?', ()=>{ state.prosedurler=state.prosedurler.filter(p=>p.id!==id); renderPage('prosedurler'); showToast('Silindi','info'); dbAutoSave(["prosedurler"]); }); }
 function saveProsedur(){
   const ad=document.getElementById('prAdi').value.trim(),no=document.getElementById('prNo').value.trim();
   if(!ad||!no){showToast('Ad ve no zorunlu','error');return;}
@@ -2882,7 +2882,7 @@ function renderSeciliProsedurBadgeler(){
   }).join('');
 }
 function editMethod(id){openMethodModal(id);}
-function deleteMethod(id){showConfirm('Method silinsin mi?', ()=>{ state.methodlar=state.methodlar.filter(m=>m.id!==id); renderPage('methodlar'); showToast('Silindi','info'); }); }
+function deleteMethod(id){showConfirm('Method silinsin mi?', ()=>{ state.methodlar=state.methodlar.filter(m=>m.id!==id); renderPage('methodlar'); showToast('Silindi','info'); dbAutoSave(["methodlar"]); }); }
 function saveMethod(){
   const ad=document.getElementById('mAdi').value.trim(),kod=document.getElementById('mKod').value.trim();
   if(!ad||!kod){showToast('Ad ve kod zorunlu','error');return;}
@@ -2966,7 +2966,7 @@ function openMusteriCihazModal(id=null){
   openModal('musteriCihazModal');
 }
 function editMCihaz(id){openMusteriCihazModal(id);}
-function deleteMCihaz(id){showConfirm('Müşteri cihazı silinsin mi?', ()=>{ state.musteriCihazlari=state.musteriCihazlari.filter(c=>c.id!==id); renderPage('musteriCihazlari'); showToast('Silindi','info'); }); }
+function deleteMCihaz(id){showConfirm('Müşteri cihazı silinsin mi?', ()=>{ state.musteriCihazlari=state.musteriCihazlari.filter(c=>c.id!==id); renderPage('musteriCihazlari'); showToast('Silindi','info'); dbAutoSave(["musteriCihazlari"]); }); }
 
 function getMCData(){
   return {
@@ -3596,7 +3596,7 @@ function openTeklifModal(id=null){
   openModal('teklifModal');
 }
 function editTeklif(id){openTeklifModal(id);}
-function deleteTeklif(id){showConfirm('Teklif silinsin mi?', ()=>{ state.teklifler=state.teklifler.filter(t=>t.id!==id); renderPage('teklifler'); showToast('Silindi','info'); }); }
+function deleteTeklif(id){showConfirm('Teklif silinsin mi?', ()=>{ state.teklifler=state.teklifler.filter(t=>t.id!==id); renderPage('teklifler'); showToast('Silindi','info'); dbAutoSave(["teklifler"]); }); }
 
 function tFirmaChange(){
   const firmaId=parseInt(document.getElementById('tFirma').value);
@@ -5159,7 +5159,8 @@ function deleteSertifika(id) {
       if(ck) ck.durum = 'bekliyor';
     }
     updateSertBadge();
-    showToast('Sertifika silindi','info'); dbAutoSave(["sertifikalar"]);
+    showToast('Sertifika silindi','info');
+    dbAutoSave(["sertifikalar","kalibrasyon","cihazKabuller"]);
     renderPage('sertifikalar');
   });
 }
@@ -5180,7 +5181,7 @@ function clearSertifika(id) {
     }
     updateSertBadge();
     showToast('Sertifika içeriği temizlendi. Kal. Başlat butonu tekrar aktif.','success');
-  dbAutoSave(["sertifikalar", "kalibrasyon", "cihazKabuller"]);
+    dbAutoSave(["sertifikalar","kalibrasyon","cihazKabuller"]);
     renderPage('sertifikalar');
   });
 }
