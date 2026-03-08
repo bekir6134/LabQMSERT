@@ -1452,7 +1452,7 @@ th.sort-desc::after { content:' ↓'; opacity:1; color:var(--accent2); }
       </div>
       <div class="form-row">
         <div class="form-field"><label class="required">Kalibrasyon Tarihi</label><input type="date" id="kalTarih"></div>
-        <div class="form-field"><label class="required">Sertifika No</label><input id="kalSertNo" placeholder="SERT-2025-001"></div>
+        <div class="form-field"><label>Sonraki Kalibrasyon Tarihi</label><input type="date" id="kalSonrakiTarih"></div>
       </div>
       <div class="form-row">
         <div class="form-field">
@@ -1461,18 +1461,7 @@ th.sort-desc::after { content:' ↓'; opacity:1; color:var(--accent2); }
         </div>
         <div class="form-field">
           <label>Onaylayan Personel</label>
-          <select id="kalOnaylayan"><option value="">Seçiniz</option></select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-field"><label>Sonraki Kalibrasyon Tarihi</label><input type="date" id="kalSonrakiTarih"></div>
-        <div class="form-field">
-          <label class="required">Uygunluk Sonucu</label>
-          <select id="kalSonuc">
-            <option value="uygun">✅ Uygun</option>
-            <option value="sartli">⚠️ Şartlı Uygun</option>
-            <option value="uygun_degil">❌ Uygun Değil</option>
-          </select>
+          <select id="kalOnaylayan"><option value="">-</option></select>
         </div>
       </div>
       <div class="form-field">
@@ -3205,12 +3194,19 @@ function kalBaslat(fisId,cihazId){
   const onaylayanSel=document.getElementById('kalOnaylayan');
   yapanSel.innerHTML='<option value="">Seçiniz</option>'+state.personeller.filter(p=>p.kalPers).map(p=>`<option value="${p.id}">${p.ad} ${p.soyad}</option>`).join('');
   onaylayanSel.innerHTML='<option value="">-</option>'+state.personeller.filter(p=>p.sertOnay).map(p=>`<option value="${p.id}">${p.ad} ${p.soyad}</option>`).join('');
+  // Giriş yapan kişiyi otomatik seç
+  const loginUser = state.user;
+  if(loginUser) {
+    const loginPersonel = state.personeller.find(p => p.ad+' '+p.soyad === loginUser.name || p.id === loginUser.id);
+    if(loginPersonel && loginPersonel.kalPers) yapanSel.value = loginPersonel.id;
+  }
+  // Onaylayan - sistemdeki ilk uygun kişi
+  const ilkOnaylayan = state.personeller.find(p=>p.sertOnay);
+  if(ilkOnaylayan) onaylayanSel.value = ilkOnaylayan.id;
   // Tarihi bugün yap
   document.getElementById('kalTarih').value=new Date().toISOString().split('T')[0];
-  document.getElementById('kalSertNo').value=uretNumara('sert');
   document.getElementById('kalSonrakiTarih').value='';
   document.getElementById('kalNot').value='';
-  document.getElementById('kalSonuc').value='uygun';
   document.getElementById('kalModalTitle').textContent=`⚗️ ${mc.ad} — Kalibrasyon Kaydı`;
   // Store context
   document.getElementById('kalibrasYonModal')._fisId=fisId;
@@ -3223,32 +3219,29 @@ function saveKalibrasyon(){
   const fisId=modal._fisId;
   const cihazId=modal._cihazId;
   const tarih=document.getElementById('kalTarih').value;
-  const sertNo=document.getElementById('kalSertNo').value.trim();
   const yapanId=parseInt(document.getElementById('kalYapan').value);
-  if(!tarih||!sertNo||!yapanId){showToast('Tarih, sertifika no ve yapan personel zorunludur','error');return;}
+  if(!tarih||!yapanId){showToast('Kalibrasyon tarihi ve yapan personel zorunludur','error');return;}
   dbAutoSave(["kalibrasyon", "nextKalId", "cihazKabuller", "sertifikalar", "nextSertId"]);
   const kayit={
     id:state.nextKalId++,
     cihazId,fisId,
-    tarih,sertNo,
+    tarih,
+    sertNo: '', // Sertifika no Turkäk API'den gelecek
     yapanId,
     onaylayanId:parseInt(document.getElementById('kalOnaylayan').value)||null,
     sonrakiTarih:document.getElementById('kalSonrakiTarih').value,
-    sonuc:document.getElementById('kalSonuc').value,
     not:document.getElementById('kalNot').value
   };
-  if(!document.getElementById('kalibrasYonModal')._editId) artirNumara('sert');
+  if(!document.getElementById('kalibrasYonModal')._editId);
   state.kalibrasyon.push(kayit);
   // Durumu güncelle
   changeCKDurum(fisId,cihazId,'tamamlandi');
-  // Sertifika taslak oluştur
-  const newSertNo = uretNumara('sert');
-  artirNumara('sert');
+  // Sertifika taslak oluştur (no boş - Turkäk API'den gelecek)
   const fis = state.cihazKabuller.find(k=>k.id===fisId);
   const mc2 = state.musteriCihazlari.find(x=>x.id===cihazId);
   state.sertifikalar.push({
     id: state.nextSertId++,
-    no: newSertNo,
+    no: '', // Turkäk API'den gelecek
     kalId: kayit.id,
     cihazId, fisId,
     firmaId: fis?.firmaId||null,
@@ -3260,7 +3253,7 @@ function saveKalibrasyon(){
   });
   updateSertBadge();
   closeModal('kalibrasYonModal');
-  showToast('Kalibrasyon kaydedildi · Sertifika taslağı oluşturuldu: '+newSertNo,'success');
+  showToast('Kalibrasyon kaydedildi · Sertifika taslağı oluşturuldu (No: Turkäk\'tan gelecek)','success');
   renderPage('cihazKabul');
 }
 
