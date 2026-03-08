@@ -4513,10 +4513,14 @@ function sertOnizle() {
 
   // 3. sayfa: PDF data hazır mı?
   const hasPdf = !!(s.ekPdfData);
+  const pdfLabAd    = (ay.labAdi || document.getElementById('brandName')?.textContent || '').replace(/'/g, "\\'");
+  const pdfAkredNo  = (ay.akredNo || '').replace(/'/g, "\\'");
+  const pdfSertNo   = sertNo.replace(/'/g, "\\'");
+  const toplamSayfa2 = toplamSayfa;
 
   const olcumPdfSection = hasPdf ? `
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>
-    <div id="pdfPagesContainer" style="background:#f0f0f0;padding:8mm 0">
+    <div id="pdfPagesContainer" style="background:#f0f0f0;padding:4mm 0">
       <div class="pdf-loading" style="text-align:center;padding:30px;font-family:Arial;font-size:13px;color:#555">
         ⏳ Ölçüm sayfaları yükleniyor...
       </div>
@@ -4526,8 +4530,42 @@ function sertOnizle() {
       const pdfjsLib = window['pdfjs-dist/build/pdf'];
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       const container = document.getElementById('pdfPagesContainer');
+      const LAB_AD   = '${pdfLabAd}';
+      const AKRED_NO = '${pdfAkredNo}';
+      const SERT_NO  = '${pdfSertNo}';
+      const TOPLAM   = '${toplamSayfa2}';
+      const FOOTER_TEXT = 'Bu sertifika, laboratuvarın yazılı izni olmadan kısmen kopyalanıp çoğaltılamaz. İmzasız ve TÜRKAK Doğrulama Kare Kodu bulunmayan sertifikalar geçersizdir. Bu sertifikanın kullanımından önce asist.turkak.org.tr bağlantısı üzerinden kare kodu okutarak doğrulayınız. / This certificate shall not be reproduced other than in full except with the permission of the laboratory. Certificates that are unsigned and do not contain TÜRKAK Certificate Verification QR code are invalid. Before using this certificate, verify it by scanning the QR code via asist.turkak.org.tr.';
+
+      function makePageWrapper(pageNum, totalPages, canvas) {
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'width:210mm;margin:0 auto 8mm auto;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;flex-direction:column';
+
+        // Header
+        const hdr = document.createElement('div');
+        hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:5px 14mm 4px 14mm;border-bottom:1.5pt solid #000;font-family:Arial,sans-serif';
+        hdr.innerHTML = \`
+          <div style="font-size:9pt;font-weight:700;flex:1;text-align:center">\${LAB_AD}</div>
+          <div style="font-size:8.5pt;font-weight:700;white-space:nowrap;margin-left:10px">\${AKRED_NO}<br><span style="color:#555;font-size:7.5pt">\${SERT_NO}</span></div>
+        \`;
+        wrapper.appendChild(hdr);
+
+        // Canvas
+        canvas.style.cssText = 'width:100%;display:block';
+        wrapper.appendChild(canvas);
+
+        // Footer
+        const ftr = document.createElement('div');
+        ftr.style.cssText = 'padding:4px 14mm 5px 14mm;border-top:1pt solid #ccc;font-family:Arial,sans-serif;font-size:6.5pt;color:#444;line-height:1.4;display:flex;justify-content:space-between;align-items:flex-end';
+        ftr.innerHTML = \`
+          <div style="flex:1;padding-right:10px">\${FOOTER_TEXT}</div>
+          <div style="white-space:nowrap;font-size:7pt;font-weight:600">Sayfa \${pageNum} / \${TOPLAM}</div>
+        \`;
+        wrapper.appendChild(ftr);
+
+        return wrapper;
+      }
+
       try {
-        // base64 → Uint8Array
         const b64 = '${s.ekPdfData}';
         const binStr = atob(b64);
         const bytes = new Uint8Array(binStr.length);
@@ -4540,9 +4578,8 @@ function sertOnizle() {
           const canvas = document.createElement('canvas');
           canvas.width = viewport.width;
           canvas.height = viewport.height;
-          canvas.style.cssText = 'width:210mm;display:block;margin:0 auto 8mm auto;box-shadow:0 2px 8px rgba(0,0,0,.15);background:#fff';
           await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
-          container.appendChild(canvas);
+          container.appendChild(makePageWrapper(p+2, TOPLAM, canvas));
         }
       } catch(err) {
         container.innerHTML = '<div style="padding:20px;color:red;font-family:Arial">PDF yüklenemedi: '+err.message+'</div>';
