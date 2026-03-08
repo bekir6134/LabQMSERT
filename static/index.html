@@ -5532,14 +5532,17 @@ function dbAutoSave(keys) {
   _saveTimer = setTimeout(() => dbSaveBatch(keys), 1500);
 }
 
-function showConfirm(msg, onYes) {
+function showConfirm(msg, onYes, confirmLabel) {
+  const isDelete = !confirmLabel && (msg.toLowerCase().includes('sil') || msg.toLowerCase().includes('temizle') || msg.toLowerCase().includes('kaldır'));
+  const btnLabel = confirmLabel || (isDelete ? 'Sil' : 'Tamam');
+  const btnCls   = (btnLabel === 'Sil') ? 'btn-danger' : 'btn-primary';
   const el = document.createElement('div');
   el.className = 'confirm-overlay';
   el.innerHTML = `<div class="confirm-box">
     <div class="confirm-msg">⚠️ ${msg}</div>
     <div class="confirm-actions">
       <button class="btn btn-secondary" id="confirmNo">İptal</button>
-      <button class="btn btn-danger" id="confirmYes">Sil</button>
+      <button class="btn ${btnCls}" id="confirmYes">${btnLabel}</button>
     </div>
   </div>`;
   document.body.appendChild(el);
