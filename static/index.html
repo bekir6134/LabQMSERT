@@ -1418,12 +1418,12 @@ th.sort-desc::after { content:' ↓'; opacity:1; color:var(--accent2); }
 
 <!-- Önizleme Modal -->
 <div class="modal-overlay" id="onizlemeModal">
-  <div class="modal modal-lg">
+  <div class="modal modal-wide" style="max-height:90vh;display:flex;flex-direction:column">
     <div class="modal-header">
       <span class="modal-title" id="onizlemeTitle">Dosya Önizleme</span>
       <div class="modal-close" onclick="closeModal('onizlemeModal')">✕</div>
     </div>
-    <div class="modal-body" id="onizlemeBody" style="text-align:center"></div>
+    <div class="modal-body" id="onizlemeBody" style="text-align:center;flex:1;overflow:auto;padding:12px"></div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('onizlemeModal')">Kapat</button>
       <button class="btn btn-primary" id="onizlemeIndirBtn">⬇️ İndir</button>
@@ -4843,8 +4843,22 @@ function onizleDosya(idx, key) {
   };
 
   if (f.type === 'application/pdf' || f.ext === 'PDF') {
-    body.innerHTML = `<embed src="${f.dataUrl}" type="application/pdf" width="100%" height="500px" style="border-radius:var(--radius)">
-      <p class="text-muted" style="margin-top:8px">PDF görüntülenemiyor ise indirip açabilirsiniz.</p>`;
+    // data: URL'i Blob URL'ye çevir (tarayıcı güvenlik kısıtlamasını aşmak için)
+    try {
+      const byteStr = atob(f.dataUrl.split(',')[1]);
+      const arr = new Uint8Array(byteStr.length);
+      for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+      const blob = new Blob([arr], { type: 'application/pdf' });
+      const blobUrl = URL.createObjectURL(blob);
+      body.innerHTML = `<iframe src="${blobUrl}" width="100%" height="560px" style="border:none;border-radius:var(--radius)"></iframe>
+        <p class="text-muted" style="margin-top:8px">PDF görüntülenemiyor ise indirip açabilirsiniz.</p>`;
+    } catch(e) {
+      body.innerHTML = `<div style="padding:40px;text-align:center">
+        <div style="font-size:48px;margin-bottom:16px">📄</div>
+        <p style="color:var(--text);">${f.name}</p>
+        <p class="text-muted">PDF önizleme yüklenemedi. İndirmek için butona basın.</p>
+      </div>`;
+    }
   } else if (f.type.startsWith('image/')) {
     body.innerHTML = `<img src="${f.dataUrl}" class="file-preview-img" alt="${f.name}">`;
   } else {
