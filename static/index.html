@@ -5045,7 +5045,7 @@ function _seciliIdler(grupId) {
 // PDF EronSign'a gönderilir, durum Railway'den otomatik güncellenir.
 // onaylandi→gonderildi doğrudan geçiş yapar (imza gerekmez).
 const EIMZA_GEREKEN = ['imzalandi', 'onaylandi'];
-const ERONSIGN_URL  = 'http://localhost:5500/pdfImzala';
+const ERONSIGN_URL  = 'http://localhost:5600/pdfImzala';
 // Railway backend URL — production'da kendi adresinizi yazın
 const RAILWAY_URL   = window.location.origin;
 
@@ -5073,7 +5073,7 @@ async function _eronSignaGonder(ids) {
   } catch(e) {
     // EronSign çalışmıyor veya ulaşılamıyor
     if(e.message.includes('fetch') || e.message.includes('NetworkError') || e.message.includes('Failed')) {
-      return { ok: false, hata: 'EronSign servisine ulaşılamadı. localhost:5500 çalışıyor mu?' };
+      return { ok: false, hata: 'EronSign servisine ulaşılamadı. localhost:5600 çalışıyor mu?' };
     }
     return { ok: false, hata: e.message };
   }
@@ -5087,7 +5087,7 @@ function secilenleriGecir(mevcutDurum, hedefDurum, grupId) {
   // E-imza gerektiren geçiş
   if(EIMZA_GEREKEN.includes(hedefDurum)) {
     showConfirm(
-      `${ids.length} sertifika e-imza için EronSign'a gönderilecek.\nEronSign servisi açık olmalı (localhost:5500).\n\nDevam edilsin mi?`,
+      `${ids.length} sertifika e-imza için EronSign'a gönderilecek.\nEronSign servisi açık olmalı (localhost:5600).\n\nDevam edilsin mi?`,
       async () => {
         showToast(`${ids.length} PDF EronSign'a gönderiliyor...`, 'info');
         const sonuc = await _eronSignaGonder(ids);
@@ -5130,7 +5130,7 @@ function tekSertGecir(id, hedefDurum) {
   // E-imza gerektiren geçiş
   if(EIMZA_GEREKEN.includes(hedefDurum)) {
     showConfirm(
-      `Sertifika e-imza için EronSign'a gönderilecek.\nEronSign servisi açık olmalı (localhost:5500).\n\nDevam edilsin mi?`,
+      `Sertifika e-imza için EronSign'a gönderilecek.\nEronSign servisi açık olmalı (localhost:5600).\n\nDevam edilsin mi?`,
       async () => {
         showToast('PDF EronSign\'a gönderiliyor...', 'info');
         const sonuc = await _eronSignaGonder([id]);
